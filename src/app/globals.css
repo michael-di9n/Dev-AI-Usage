@@ -1,0 +1,4122 @@
+/*
+ * The palette.
+ *
+ * One theme, Tide, declared once with light-dark(): the light value applies
+ * when the viewer's system is light, the dark value when it is dark. So there
+ * is no media query here and no duplicated dark block, and the palette cannot
+ * end up half-defined.
+ *
+ * Every pair was measured before it was used, and tests/styles.test.ts
+ * recomputes the contrast of all thirteen on-screen combinations in both modes.
+ * The UI checks re-measure it in a real browser, so a regression fails.
+ */
+:root {
+  --ground: light-dark(#f5f8fb, #0d151d);
+  --panel: light-dark(#ffffff, #141f2a);
+  --shade: light-dark(#e7eef5, #1c2a37);
+  --line: light-dark(#d6e1ec, #26364a);
+  --line-soft: light-dark(#e7eef5, #1c2a37);
+  --text: light-dark(#16222e, #e6eef6);
+  --muted: light-dark(#5a6b7c, #93a5b8);
+  --accent: light-dark(#1e5d92, #68aede);
+  --accent-deep: light-dark(#164a75, #3d8ac0);
+  --accent-tint: light-dark(#e4eff8, #152530);
+  --accent-strong: light-dark(#164a75, #8cc4ec);
+  --rail: light-dark(#1e5d92, #164a75);
+  --ok-fg: light-dark(#1a5c46, #7bc9a5);
+  --ok-bg: light-dark(#d6eae2, #12291f);
+  --busy-fg: light-dark(#1c4f86, #84bce8);
+  --busy-bg: light-dark(#dde9f6, #152836);
+  --warn-fg: light-dark(#7a4f10, #dcb471);
+  --warn-bg: light-dark(#f6e8d0, #2b2415);
+  --high-fg: light-dark(#8f2b25, #e98a7d);
+  --high-bg: light-dark(#f8dedb, #2e1c1a);
+  /*
+   * Dead water, for a vessel the run has not reached.
+   *
+   * A near-neutral slate in both modes, and deliberately not a dimmer accent:
+   * murk that is the same hue as water reads as less of the same thing, which
+   * is a quantity, and "not set" is not a small amount of set. It sits 1.9:1
+   * from --accent in light and 3.7:1 in dark, so the two tell themselves apart
+   * in greyscale as well as in colour - and neither is the only channel here,
+   * because the water line is a third of the way up instead of three quarters
+   * and the tag under the vessel says "not set" in words.
+   */
+  --murk: light-dark(#2b3239, #3f4b56);
+  /* Medals for the usage band. Measured at 6.6-9.3:1 on their own chips. The
+     three sit at almost the same luminance, so under greyscale or full CVD
+     they are indistinguishable from one another - which is exactly why the
+     badge always carries the word and a medal glyph as well. Colour here is
+     the third channel, never the only one. */
+  --gold-fg: light-dark(#6d4c00, #e6c56b);
+  --gold-bg: light-dark(#fbf1cd, #2c2312);
+  --silver-fg: light-dark(#46525e, #c4ced9);
+  --silver-bg: light-dark(#eaeef2, #232a32);
+  --bronze-fg: light-dark(#7a4114, #dfa677);
+  --bronze-bg: light-dark(#f8e4d4, #302014);
+  /*
+   * The terminal, for the trace tree.
+   *
+   * A fixed dark surface in both schemes, because a terminal is a terminal -
+   * the pair differs because a dark panel on a bright page can sit a shade
+   * lighter without halating, while in dark mode it should read as deeper than
+   * the page around it.
+   *
+   * Green, but a measured one. The note on `.term` further down explains why
+   * the live feed is not phosphor-on-black: a palette that fails contrast is
+   * one nobody can read at 8am. These clear AA comfortably - 14:1 for the
+   * body, 6.7:1 for the dim, 11:1 for the key - so the tree can have the look
+   * without buying the eye strain.
+   */
+  --term-bg: light-dark(#0f1720, #060a0f);
+  --term-line: light-dark(#22303c, #16202b);
+  --term-fg: light-dark(#dbe7dd, #cfe0d2);
+  --term-dim: light-dark(#8ba396, #7f978a);
+  --term-key: light-dark(#7ede9a, #6ccd88);
+  /* The coin stack. A graphic rather than text, so the floor is the 3:1
+     non-text one - but all three clear it against --panel in both modes
+     (3.3-12.5:1), because a stack you have to squint at cannot be counted,
+     which is the only thing it is there to let you do. The face and the rim
+     sit 1.7:1 apart, which is what makes it read as metal and not as a disc. */
+  --coin: light-dark(#b8860b, #e8bc4f);
+  --coin-edge: light-dark(#8a6108, #b08c2c);
+  --coin-line: light-dark(#6d4c07, #f5dda0);
+  /* The model mix: blue, teal, bronze, slate.
+     Separated by hue and by lightness together, which the first version of
+     these four was not. It leaned on hue alone and the pairs it produced were
+     too close to be identity: blue against teal measured OKLab dE 12.3 in
+     light and 9.6 in dark for a reader with full colour vision, under the 15
+     two categorical neighbours need. Stepping the teal lighter and the slate
+     cooler puts the worst adjacent pair at 15.1 light and 16.4 dark, with the
+     worst colour-vision-deficient pair at 12.3 and 10.7.
+     The slate is deliberately near-grey and fails a chroma floor on purpose:
+     it is the colour the tail folds into, and "the other three, together" is
+     not a series with an identity of its own.
+     Colour is still never the only channel - each slice's mark is a distinct
+     glyph before it is a colour, and the model's name, dollars and share are
+     written beside it - but it is a working channel now rather than a
+     decorative one. All four clear the 3:1 graphic floor on --panel in both
+     modes, which tests/styles.test.ts re-measures. */
+  /*
+   * The same four, as ink.
+   *
+   * A chip prints its class's figure, not just a glyph in it, and text owes
+   * the 4.5:1 floor where a graphic owes 3. `--mix-2` measures 3.28:1 on
+   * `--shade` in light mode - fine for a 14px bar segment, under the floor for
+   * a number - and darkening the mix itself was not available: it drops the
+   * bar's worst adjacent pair to dE 12.0 against a floor of 15, and lands 2.8
+   * from a trace-path step colour against a floor of 8.
+   *
+   * So the ink is the mix, moved only where the light surface needs it, and
+   * `tests/styles.test.ts` measures both halves of that claim: each ink clears
+   * AA on `--shade`, and each stays within dE 12 of the mix it stands for, so
+   * a chip can still be matched to its segment by eye.
+   */
+  --ink-1: light-dark(#16548a, #86c3f2);
+  --ink-2: light-dark(#136d5f, #34ad93);
+  --ink-3: light-dark(#8a4c07, #e9a648);
+  --ink-4: light-dark(#4e5764, #99a4b6);
+  --mix-1: light-dark(#16548a, #86c3f2);
+  --mix-2: light-dark(#1f927f, #34ad93);
+  --mix-3: light-dark(#a2590a, #e9a648);
+  --mix-4: light-dark(#5b6470, #99a4b6);
+  /* The five kinds of step on the trace path: violet, blue, bronze, green,
+     rose. Unlike the model mix these are not drawn in a fixed order - any two
+     kinds can end up side by side in the strip - so the separation below is
+     measured on EVERY pair rather than on adjacent ones, which is what
+     tests/styles.test.ts asserts and why five hues need this much of the
+     circle.
+     Searched rather than picked, against four gates at once: OKLCH chroma at
+     or above 0.10 so none reads grey, worst all-pairs OKLab dE 18.0 light and
+     17.2 dark for full colour vision, worst all-pairs dE 8.7 light and 11.0
+     dark under simulated protanopia and deuteranopia, and 3.55:1 light /
+     5.40:1 dark against the surface. The red-green pair is the one that costs:
+     under deuteranopia it collapses to nothing on hue alone, so the green and
+     the rose are separated by lightness as well - an earlier set that looked
+     fine measured dE 2.4 there.
+     Each is also kept at least dE 8 from every --mix-* in the same mode. The
+     cost bar sits on this same card, and a step glyph that is exactly a bar
+     segment's colour reads as the same encoding twice. Hue families are still
+     shared, because the app's palette already spans the circle.
+     Colour is never the only channel: every chip prints its own name beside
+     the glyph, the glyph shape differs per kind, and the legend under the
+     strip names the kinds this run used. */
+  --step-user: light-dark(#5f4a88, #ddb9fd);
+  --step-tool: light-dark(#538bc0, #7299d6);
+  --step-mcp: light-dark(#7c4b02, #c28e13);
+  --step-skill: light-dark(#018548, #85d2a5);
+  --step-subagent: light-dark(#c46e84, #dc718f);
+  /* The green a figure wears while it is still blocks.
+     Not the terminal's own green - that one is chosen against a near-black
+     terminal and measures 1.6:1 on a white panel, so the decode would be a
+     flash of
+     genuinely illegible text on the brightest surface on the page. This one
+     clears the body-text floor on both surfaces a decoding figure can sit on -
+     the chips wear --shade, which is the tighter of the two - and both pairs
+     are asserted in tests/styles.test.ts alongside every other text pair. */
+  --decode: light-dark(#01703d, #7ede9a);
+  /*
+   * The Setup fascia.
+   *
+   * A second committed material, the way --term-* already is one: Setup is the
+   * back of the machine rather than a page of settings, so its figures are read
+   * off dials and counter windows on an enamel plate. The plate is themed
+   * rather than fixed, because the one control on it chooses light or dark, and
+   * a control that cannot move the surface it sits on reads as broken.
+   *
+   * --engrave-dim exists because --muted does not clear AA on --fascia in light
+   * mode - 4.23:1, measured. Every quiet line on the plate uses this instead.
+   * The readouts reuse --term-bg and --term-key rather than adding a pair: a
+   * counter window is a small terminal, and those were measured for this job.
+   */
+  --fascia: light-dark(#dbe3ea, #182531);
+  --fascia-edge: light-dark(#aab8c6, #080e14);
+  --engrave: light-dark(#2e3c49, #a6bacc);
+  --engrave-dim: light-dark(#4b5966, #8ba0b3);
+  --knob-face: light-dark(#6b7a89, #5e7284);
+  --knob-rim: light-dark(#4a5765, #334252);
+  --pointer: light-dark(#f4f8fb, #eaf2f9);
+  /* The recess: the milled-out track a selector key sits in, and the chip a
+     path is set in. Only 1.17:1 from the plate, because a recess is read off
+     its shadow and not off its colour - but the quiet legend on it is text,
+     so the pair is measured like any other. */
+  --recess: light-dark(#c8d3de, #0f1922);
+  /*
+   * The print sheet. Paper, because the paths are the one thing on this page
+   * that is neither a reading nor a control - they are a parts list, and a
+   * parts list is a card slipped into the back of the machine, not an
+   * instrument. --sheet-rule draws the leader dots and is deliberately under
+   * the graphic floor: it joins two things already legible without it, and a
+   * rule as dark as the text it joins competes with it.
+   */
+  --sheet: light-dark(#f6f2e6, #1d1b16);
+  --sheet-ink: light-dark(#37322a, #dcd2be);
+  --sheet-rule: light-dark(#b3a88e, #4c4638);
+}
+
+/* Sizing, shared by every theme. */
+:root {
+  /* Without this, light-dark() has no dark branch to resolve to and every
+     theme renders light regardless of the system setting. */
+  color-scheme: light dark;
+  --radius: 8px;
+  --rail-w: 176px;
+}
+
+/*
+ * Pinning a mode.
+ *
+ * `color-scheme: only light|dark` is what makes light-dark() resolve one way
+ * regardless of the system setting, so the picker can offer light and dark
+ * without every token needing a second definition.
+ */
+:root[data-mode="light"] { color-scheme: only light; }
+:root[data-mode="dark"]  { color-scheme: only dark; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+.shell { display: flex; min-height: 100vh; }
+
+.rail {
+  width: var(--rail-w);
+  flex: 0 0 var(--rail-w);
+  background: var(--rail);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rail-brand {
+  color: #fff;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  padding: 4px 10px 18px;
+  line-height: 1.3;
+}
+.rail-brand span { display: block; font-weight: 400; font-size: 12px; opacity: 0.85; }
+
+.rail a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 13.5px;
+}
+/* Not opacity: a faded white on the rail drops below the contrast floor. */
+.rail a:hover { background: rgba(255, 255, 255, 0.14); }
+.rail a.on { background: var(--panel); color: var(--text); font-weight: 600; }
+.rail a svg { flex: 0 0 16px; }
+.rail-nav { display: flex; flex-direction: column; gap: 4px; }
+
+.rail-foot { margin-top: auto; padding: 10px; color: #fff; font-size: 11.5px; line-height: 1.5; }
+
+.main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+.topbar {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.topbar-meta { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+
+.content { padding: 26px 28px 72px; max-width: 1280px; }
+
+@media (max-width: 760px) {
+  .shell { flex-direction: column; }
+  .rail {
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 10px 12px;
+  }
+  .rail-brand { display: none; }
+  .rail-foot { display: none; }
+  .rail-nav { flex-direction: row; gap: 6px; width: 100%; overflow-x: auto; }
+  .rail a { white-space: nowrap; }
+  /* The rail is one horizontal strip here, so the group heading has nothing
+     below it to head and the indent would just cost width. The links stay,
+     which is the part that matters: every page is still one tap away. */
+  .content { padding: 20px 16px 60px; }
+  .topbar { padding: 12px 16px; }
+}
+
+/* --- page header ---------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.page-head h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -0.02em; }
+.page-head p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 74ch; }
+.page-head-action { margin-left: auto; }
+
+.btn {
+  display: inline-block;
+  background: var(--accent);
+  /* Not #fff. Dark themes invert --accent to a light tint, and white on that
+     measured 3.28:1. --ground is light exactly when --accent is dark and dark
+     exactly when it is light, so this is the same already-measured pair as
+     ["--accent", "--ground"] in tests/styles.test.ts, read the other way up. */
+  color: var(--ground);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+}
+.btn:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+
+/* --- sections ------------------------------------------------------------- */
+
+section { margin-bottom: 30px; }
+section > h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+section > p.note {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: -4px 0 12px;
+  max-width: 80ch;
+}
+
+/* --- stat tiles ----------------------------------------------------------- */
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.tile {
+  background: var(--shade);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px 18px;
+}
+.tile .k {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  font-weight: 600;
+}
+/* Proportional figures, not tabular: equal-width digits make a number like
+   121 look loose at display sizes. tabular-nums stays on table columns, where
+   digits must align vertically. */
+.tile .v {
+  font-size: 29px;
+  margin-top: 8px;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.tile .s { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+/* --- panels and tables ---------------------------------------------------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* Tables are the one thing allowed to scroll sideways, inside their own box. */
+.panel-scroll { overflow-x: auto; }
+.panel-pad { padding: 16px 18px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+thead th {
+  background: var(--shade);
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 10px 14px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+/* Column dividers, as in the reference - they make a wide row readable. */
+thead th + th, tbody td + td { border-left: 1px solid var(--line-soft); }
+
+tbody td { padding: 11px 14px; border-top: 1px solid var(--line-soft); vertical-align: top; }
+tbody tr:first-child td { border-top: none; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.cell-main { font-weight: 500; }
+.cell-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+.table-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--shade);
+  color: var(--muted);
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+code {
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--shade);
+  border: 1px solid var(--line-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  word-break: break-word;
+}
+
+/* --- status pills --------------------------------------------------------- */
+
+.pill {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2.5px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.pill.ok   { color: var(--ok-fg);   background: var(--ok-bg); }
+.pill.busy { color: var(--busy-fg); background: var(--busy-bg); }
+.pill.warn { color: var(--warn-fg); background: var(--warn-bg); }
+.pill.high { color: var(--high-fg); background: var(--high-bg); }
+.pill.info { color: var(--busy-fg); background: var(--busy-bg); }
+.pill.plain { color: var(--muted); background: var(--shade); }
+
+.dash { color: var(--muted); }
+
+/* --- segmented filter ----------------------------------------------------- */
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--shade);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 4px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.segmented a {
+  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 5px;
+}
+.segmented a:hover { color: var(--text); }
+.segmented a.on {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+/* --- links ---------------------------------------------------------------- */
+
+a { color: var(--accent); }
+.content a:focus-visible, .rail a:focus-visible, .segmented a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- first-run guide ------------------------------------------------------ */
+
+.guide {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 26px 28px;
+  max-width: 780px;
+}
+.guide-h { font-size: 18px; margin: 0 0 8px; letter-spacing: -0.015em; }
+.guide-p { margin: 0 0 10px; font-size: 13.5px; max-width: 68ch; }
+.guide-p.muted { color: var(--muted); font-size: 12.5px; }
+.guide-next {
+  background: var(--accent-tint);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 15px 17px 11px;
+  margin: 20px 0 24px;
+}
+.guide-next-k {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.guide-cmd {
+  font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--shade);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 8px 11px;
+  margin: 0 0 8px;
+  overflow-x: auto;
+  white-space: pre;
+}
+.guide-steps { margin: 0; padding-left: 22px; }
+.guide-steps li { margin-bottom: 17px; }
+.guide-steps li::marker { color: var(--accent); font-weight: 700; }
+.guide-step-t { font-weight: 600; margin-bottom: 6px; font-size: 13.5px; }
+
+.nothing {
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  padding: 15px 17px 9px;
+  margin: 16px 18px;
+  color: var(--muted);
+}
+.nothing .guide-cmd { max-width: 340px; }
+
+/* The observability note reads as prose, not as data. */
+
+.evidence { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.evidence-k { color: var(--muted); font-size: 12px; }
+
+/* A standing note about the page, distinct from a finding in it. */
+.notice a { color: var(--accent-strong); }
+.notice {
+  background: var(--accent-tint);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 12px 15px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  max-width: 80ch;
+}
+
+/* --- appearance controls -------------------------------------------------- */
+
+.topbar-tools { margin-left: 14px; display: flex; align-items: center; gap: 10px; }
+
+/* With no meta text the tools would sit against the title; push them right. */
+.topbar-tools-alone { margin-left: auto; }
+
+/* The cost column. A column rather than the grid cell itself, so the band can
+   sit under the panel instead of under the whole row - the right-hand column
+   is the taller of the two, and a band placed after the row landed a hand's
+   width below the figure it is a reading of. */
+.hero-col { display: flex; flex-direction: column; min-width: 0; }
+
+/*
+ * The usage band, struck at size, under the cost figure it reads.
+ *
+ * It was a 12px chip in the top bar, where it was a piece of the frame. Here
+ * it is the second thing the page says, so it is drawn at the weight of a
+ * second answer rather than a third label - the medal at 88px, and the rank
+ * set larger than any other word on the page bar the cost itself.
+ *
+ * Its own tinted panel in the metal, which is what makes it read as struck
+ * rather than as one more tile. Every colour inside it is `inherit` off that
+ * tint, so the whole object stays inside the one measured pair - see the
+ * badge-chip test in tests/styles.test.ts for the bug that rule exists for.
+ */
+.usage-band {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 14px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.usage-band.gold   { color: var(--gold-fg);   background: var(--gold-bg); }
+.usage-band.silver { color: var(--silver-fg); background: var(--silver-bg); }
+.usage-band.bronze { color: var(--bronze-fg); background: var(--bronze-bg); }
+.usage-band.none   { color: var(--muted);     background: var(--shade); }
+
+.usage-band-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* The rank. The one word on this band, so it carries the weight the paragraph
+   beside it used to. */
+.usage-band-text strong {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: inherit;
+}
+/* The figure it came from, and the window. Never omitted: a rank with no
+   arithmetic beside it is a grade. */
+.usage-band-text span { font-size: 13.5px; font-weight: 500; color: inherit; opacity: 0.9; }
+
+/*
+ * The medal.
+ *
+ * Filled from the band's own foreground at three densities, so the whole
+ * object is one colour and needs no token of its own. The ribbon sits behind
+ * the disc by document order rather than by z-index - an SVG paints in the
+ * order it is written, and z-index on an SVG child does nothing.
+ */
+.usage-medal { flex: 0 0 auto; display: block; }
+.medal-ribbon { fill: currentColor; opacity: 0.4; }
+.medal-disc { fill: currentColor; fill-opacity: 0.16; stroke: currentColor; stroke-width: 3; }
+.medal-ring { fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.45; }
+.medal-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/*
+ * The band is the only ambient motion in the app, and it is on the one object
+ * that is not a measurement.
+ *
+ * Two things, both slow, both on the medal itself and neither on a figure. It
+ * hangs from a ribbon, so it rocks about the point the straps meet at - a
+ * couple of degrees, over five seconds, which is a thing swinging and not a
+ * thing being animated. And a short arc of the inner ring runs full strength
+ * where the ring is otherwise faint, circling and fading as it goes: a glint
+ * off struck metal.
+ *
+ * Both are drawn in `currentColor` like the rest of the medal, so they need no
+ * token and cannot drift from the metal they sit on. The glint's resting
+ * opacity is zero, because with motion off there is no glint - and there
+ * should not be: it says nothing. The rank, the figure it came from and the
+ * window are all text, and all painted at once.
+ *
+ * `transform-box: view-box` puts both transform origins in viewBox units, so
+ * the pivot can be written as the coordinate it is: the top of the ribbon at
+ * (50, 4), and the centre of the disc at (50, 62).
+ */
+.medal-swing,
+.medal-gleam {
+  transform-box: view-box;
+}
+.medal-swing { transform-origin: 50px 4px; }
+.medal-gleam {
+  transform-origin: 50px 62px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  /* The ring's circumference is about 151 units; this lights a sixth of it. */
+  stroke-dasharray: 25 126;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Never on the unstruck medal: see the note in UsageBand.tsx. */
+  .usage-band:not(.none) .medal-swing { animation: medal-sway 5s ease-in-out infinite; }
+  .usage-band:not(.none) .medal-gleam {
+    animation: gleam-turn 7s linear infinite, gleam-light 7s ease-in-out infinite;
+  }
+}
+@keyframes medal-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+@keyframes gleam-turn {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes gleam-light {
+  0%, 8% { opacity: 0; }
+  26% { opacity: 1; }
+  48%, 100% { opacity: 0; }
+}
+
+/* Unstruck: the disc is not filled at all, so it is visibly a medal nobody was
+   given rather than a fourth rank in a duller metal. */
+.usage-band.none .medal-disc { fill: none; }
+.usage-band.none .medal-ribbon { opacity: 0.25; }
+/* With no rank there is a sentence here instead of a figure, so the label
+   above it is a phrase and gets phrase-sized type. */
+.usage-band.none .usage-band-text strong { font-size: 24px; }
+.usage-band.none .usage-band-text span { max-width: 60ch; }
+
+.cycler,
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+.cycler:hover,
+.swatch:hover { background: var(--shade); }
+.cycler:focus-visible,
+.swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.cycler-hint { color: var(--muted); font-size: 11.5px; }
+
+/* The dot on the top-bar button. One palette, so it is simply the accent -
+   it exists to make the control read as a control at a glance. */
+.swatch-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 11px;
+}
+
+.swatch.on {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  font-weight: 600;
+}
+
+.picker-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.picker-note { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
+
+/* --- readiness: picker, capability grid, quality --------------------------- */
+/*
+ * Every animated rule in this file sits inside a
+ * `prefers-reduced-motion: no-preference` guard, and tests/styles.test.ts
+ * fails the build over one that does not. What a reader who asked for
+ * stillness gets is the finished state, painted at once - so nothing may be
+ * said only by moving, and no figure may arrive late.
+ */
+
+.picker h2 { font-size: 18px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.picker .panel { margin: 14px 0; }
+/* Above the grid, both ways in share a row rather than stacking into a
+   full-height picker that pushes the answer below the fold. The bottom margin
+   is here rather than on the page, because this is the only thing that ever
+   sits directly above the capability grid. */
+.picker.compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 18px;
+  align-items: end;
+  margin-bottom: 22px;
+}
+.picker.compact .picker-form { margin-top: 0; }
+.picker-form { margin-top: 16px; }
+/* The files that actually exist here, one button each, under the box for
+   typing a path that does not. */
+.picker-alts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.picker-alts:empty { display: none; }
+.picker-form label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.picker-row { display: flex; gap: 8px; max-width: 640px; }
+.picker-row input,
+.picker-row select {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  /* A project path is long. Without this the select stretches the flex row
+     past its max-width and takes the button off screen on a phone. */
+  min-width: 0;
+}
+.picker-row input:focus-visible,
+.picker-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.btn { cursor: pointer; font-family: inherit; }
+button.btn:not(.primary) { background: var(--shade); color: var(--text); border-color: var(--line); }
+button.btn:not(.primary):hover { background: var(--line-soft); border-color: var(--muted); }
+
+/*
+ * The scan headline.
+ *
+ * Deliberately not in a card. Everything below it is a bordered surface, so
+ * the one thing that is only type reads as the page's answer rather than as
+ * another measurement - which is the hierarchy the six identical caps labels
+ * used to flatten.
+ */
+.scan-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.scan-figure { margin: 0; display: flex; align-items: center; gap: 14px; }
+.scan-figure > span { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); }
+
+/*
+ * The seal.
+ *
+ * Two tokens per band, aliased onto the metals so the shape's rules are
+ * written once and only the pair changes. The metals are the usage tier's
+ * scale, whose rule is "tones are volume, not merit" - see MATURITY_TONE for
+ * why a red-to-green ramp would have been the wrong answer on a page that
+ * reports rather than grades.
+ */
+.seal { display: inline-flex; flex: 0 0 auto; }
+.seal svg { display: block; }
+.seal-plain  { --seal-fg: var(--muted);     --seal-bg: var(--shade); }
+.seal-busy   { --seal-fg: var(--busy-fg);   --seal-bg: var(--busy-bg); }
+.seal-bronze { --seal-fg: var(--bronze-fg); --seal-bg: var(--bronze-bg); }
+.seal-silver { --seal-fg: var(--silver-fg); --seal-bg: var(--silver-bg); }
+.seal-gold   { --seal-fg: var(--gold-fg);   --seal-bg: var(--gold-bg); }
+
+.seal-rim { fill: var(--seal-fg); }
+.seal-face { fill: var(--seal-bg); }
+/* The inner rule, at half the rim's weight. A seal reads as struck because of
+   the step between its edge and its face, and this is the second step. */
+.seal-rule { fill: none; stroke: var(--seal-fg); stroke-width: 1.4; opacity: 0.55; }
+/* Proportional figures at display size, as on the tiles: tabular digits make
+   a two-digit count sit loose inside a circle. */
+.seal-n {
+  fill: var(--seal-fg);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-family: inherit;
+}
+
+/* The band word, which is the count named. Not italic despite the em: the
+   element is emphasis, the treatment is weight and colour. */
+.scan-figure em {
+  font-style: normal;
+  font-weight: 650;
+  font-size: 16px;
+  text-transform: capitalize;
+  letter-spacing: -0.01em;
+}
+/* The same five pairs again, as text rather than as a shape. Each of these
+   foregrounds is measured against --ground in tests/styles.test.ts, which is
+   why the word sits on the page and not on a tinted chip: a second tinted
+   surface beside the seal would read as two badges. */
+.scan-band-plain  { color: var(--muted); }
+.scan-band-busy   { color: var(--busy-fg); }
+.scan-band-bronze { color: var(--bronze-fg); }
+.scan-band-silver { color: var(--silver-fg); }
+.scan-band-gold   { color: var(--gold-fg); }
+/* Where the band came from. The seal shows a count and the band shows an
+   average of eight ladders, and nothing else on the page would tell a reader
+   that the colour is not reading the number. */
+.scan-figure small { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+/* Facts about the scan itself, not about the repository - so they sit apart
+   from the count rather than in the grid with the capabilities. */
+.scan-facts { margin: 0 0 0 auto; text-align: right; }
+.scan-facts dt { font-size: 11.5px; color: var(--muted); }
+.scan-facts dd { margin: 2px 0 0; font-size: 15px; font-variant-numeric: tabular-nums; }
+
+/* Cells carry four lines now, so they are wider than the 206px the
+   presence-only version needed. auto-fill rather than auto-fit: with two
+   capabilities configured the cells should stay their natural width, not
+   stretch to half the page each and re-create the full-width panels this
+   replaced. */
+.caps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 10px;
+}
+.cap {
+  background: var(--shade);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 13px 12px;
+  min-width: 0;
+}
+/* An absent capability keeps the cell rather than moving to a list of its own,
+   so the cells read as one set. A dashed edge on the page ground says it is
+   the outline of something rather than a thing. */
+.cap.off { background: none; border-style: dashed; }
+
+.cap-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+}
+/* Wayfinding, at the muted step, never louder than the seal beside it. */
+.cap-icon { display: inline-flex; flex: 0 0 auto; color: var(--muted); }
+.cap-icon svg { display: block; }
+.cap.off .cap-name { color: var(--muted); }
+
+.cap-detail { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); min-width: 0; }
+/* Shortened upstream to its last two segments, so it fits without breaking.
+   The guard stays for the pathological case - one segment longer than the
+   cell - because a path pushing the grid sideways would be worse. */
+.cap-detail code { font-size: 11.5px; word-break: break-all; }
+/* The looked-for list is several short paths, and break-all was splitting
+   ".windsurfrules" across two lines while the gaps between the chips sat
+   unused. Each path stays whole and the list wraps between them instead. */
+.cap.off .cap-detail { display: flex; flex-wrap: wrap; gap: 3px 5px; align-items: baseline; }
+.cap.off .cap-detail code { word-break: normal; white-space: nowrap; }
+.cap-count { margin-left: 5px; }
+/* The instance count, and the rule it fell under. The chip carries the band's
+   metal; the count is the evidence for it and is never omitted. */
+.cap-reached { margin: 7px 0 0; font-size: 12.5px; color: var(--muted); }
+.cap-chip {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.cap-chip-plain  { color: var(--muted);     background: var(--shade); }
+.cap-chip-bronze { color: var(--bronze-fg); background: var(--bronze-bg); }
+.cap-chip-silver { color: var(--silver-fg); background: var(--silver-bg); }
+.cap-chip-gold   { color: var(--gold-fg);   background: var(--gold-bg); }
+
+/* The next band, stated as its condition. Recessive, because it is what would
+   change the band rather than what the band is. */
+.cap-next { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.cap-next b { font-weight: 650; color: var(--text); margin-right: 4px; }
+
+/* The one-line explanation of the capability, shown here and nowhere else: it
+   is only useful beside something you do not have. `display: block` because it
+   is a span inside the `<summary>` - see `.cap-face`. */
+.cap-what { display: block; margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* What the quality rules found in the same files. Recessive, and below the
+   band it no longer decides: a repository with four skills is gold whether or
+   not their descriptions work, and this is the line that says which. */
+.cap-quality { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); opacity: 0.85; }
+
+/*
+ * An absent cell's face, and the looked-for paths behind it.
+ *
+ * The face carries the cell's padding instead of the `<li>` doing it. Padding
+ * on the list item is a strip around the edge of the card that looks exactly
+ * like the card and does not open it, and "click the card" has to mean all of
+ * the card.
+ */
+.cap.off { padding: 0; display: flex; }
+/*
+ * And the face fills what is left of it.
+ *
+ * The grid stretches every cell to the tallest in its row, so a face sized to
+ * its own text leaves a strip of card below it that is dead to the pointer -
+ * which was the first thing a click on one of these landed on. The `<details>`
+ * takes the cell and the summary takes the slack.
+ */
+.cap-probe { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cap-face {
+  flex: 1;
+  padding: 10px 13px 12px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  list-style: none;
+}
+/* The default triangle lands above the name row rather than beside it, because
+   the face is a block whose first child is a flex line. */
+.cap-face::-webkit-details-marker { display: none; }
+.cap-face::marker { content: ""; }
+/* So the marker is drawn on the explanation instead: one line down, inline,
+   where it reads as a control rather than as a bullet for the whole card. */
+.cap-face .cap-what::before {
+  content: "\25b8  ";
+  color: var(--muted);
+  font-size: 11px;
+}
+.cap-probe[open] .cap-face .cap-what::before { content: "\25be  "; }
+.cap-face:hover { background: var(--shade); }
+.cap-face:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* The paths, indented to the face's own gutter now that the cell has none. */
+.cap-probe > .cap-detail { margin: 0; padding: 0 13px 12px; }
+
+/*
+ * The band, as three chevrons in the cell's top-right corner.
+ *
+ * Filled ones are the band and outlined ones are the distance to the top, so
+ * the glyph carries both without a number to divide. The unfilled stroke is
+ * dropped to a low opacity rather than removed: three positions that stay put
+ * are what let a reader compare two cells at a glance, and cells whose
+ * badges are different heights read as different measurements.
+ */
+.chevrons { display: inline-flex; flex: 0 0 auto; margin-left: auto; }
+.chevrons svg { display: block; overflow: visible; }
+.chev {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.22;
+}
+/* Filled ones are drawn heavier as well as brighter. The three metals sit at
+   almost the same luminance, so weight is what keeps "two filled" readable
+   from a colour the reader may not be able to see at all. */
+.chev.on { stroke: var(--chev-fg); stroke-width: 2.9; opacity: 1; }
+
+/*
+ * The fill, counted up.
+ *
+ * The band reads bottom to top, so the animation says it the same way: one
+ * chevron, then two, then three, held long enough to be read as the answer,
+ * then cleared together and started again. A cell at bronze cycles between
+ * nothing and one; a cell at band 0 has no filled group at all and so never
+ * moves, which is the correct amount of motion for "not configured".
+ *
+ * Three keyframe blocks rather than one with a per-index delay, because the
+ * clear has to happen at the same instant for all of them. A staggered delay
+ * would also stagger the fade out, and a stack that empties from the bottom
+ * reads as chevrons sliding off the cell rather than as a count restarting.
+ * Keyframes cannot take a parameter, and BAND_STEPS is three.
+ *
+ * Only the fill moves. The outlines underneath are painted once and stay, so
+ * the glyph always shows three positions and the cell states the same band in
+ * words below it either way - nothing here is the only channel, and nothing
+ * here is information that arrives late.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .chev-fill .chev { animation: chev-count 3600ms ease-in-out infinite; }
+  .chev-fill .chev:nth-child(2) { animation-name: chev-count-2; }
+  .chev-fill .chev:nth-child(3) { animation-name: chev-count-3; }
+}
+
+@keyframes chev-count {
+  0%, 6% { opacity: 0; }
+  14%, 84% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+@keyframes chev-count-2 {
+  0%, 22% { opacity: 0; }
+  30%, 84% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+@keyframes chev-count-3 {
+  0%, 38% { opacity: 0; }
+  46%, 84% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+.chevrons-plain  { --chev-fg: var(--muted); }
+.chevrons-bronze { --chev-fg: var(--bronze-fg); }
+.chevrons-silver { --chev-fg: var(--silver-fg); }
+.chevrons-gold   { --chev-fg: var(--gold-fg); }
+
+/* Provenance, in the footnote position it belongs in. Inside the sentence it
+   used to wrap mid-path across two lines, at exactly the moment the reader is
+   checking we looked in the right place. */
+.scan-source { margin: 22px 0 30px; font-size: 12.5px; color: var(--muted); }
+.scan-source code { word-break: break-all; }
+.scan-source span { display: block; margin-top: 3px; }
+
+.quality-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bar { height: 6px; border-radius: 999px; background: var(--shade); overflow: hidden; min-width: 90px; flex: 1; max-width: 180px; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+
+/*
+ * The quality bar draws a value rather than announcing an arrival.
+ *
+ * The staggered entrance on the capability cells is gone. `both` fill with a
+ * per-index delay held the last cell at opacity 0 for nearly 300ms, which is
+ * a capability absent from a page that had in fact found it - a UI check
+ * screenshotting the load caught exactly that. A fade-up on a row of cards was
+ * never carrying information either. That is still the rule the chevron count
+ * above is written to: it moves a second layer over a reading already painted
+ * underneath, and never the reading itself.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .bar > i { animation: grow 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both; animation-delay: 120ms; }
+}
+
+@keyframes grow {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
+
+/* A section heading and the one control that belongs to it. The control is
+   about everything below the heading, not about the sentence under it, which
+   is where Trace's export button used to sit. */
+.section-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.section-head > h2 { margin-bottom: 0; }
+.section-action { margin-left: auto; }
+
+/* --- the standings row, on Trends ------------------------------------------
+ *
+ * The usage band and the two cross-references to other tabs. The band keeps
+ * its size - it is a reading of the cost directly above it and was struck at
+ * that weight on purpose - and these sit beside it at the weight of a link.
+ */
+.bands { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; margin-top: 14px; }
+/* The band was `margin-top: 14px` on its own; the row owns that spacing now. */
+.bands .usage-band { flex: 3 1 320px; margin-top: 0; }
+/*
+ * Beside the band where there is room, under it where there is not.
+ *
+ * The band keeps the size it was struck at - it is the reading of the cost
+ * directly above it, and shrinking it to fit two cross-references would be the
+ * tail wagging the dog. So the row wraps: at desktop widths all three sit
+ * abreast, and at laptop width the pair drops under the band and shares its
+ * width, which still reads as one block of three related standings rather than
+ * as three separate things.
+ */
+.standings { flex: 2 1 260px; display: flex; gap: 10px; }
+
+.standing {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+}
+.standing:hover { border-color: var(--accent); }
+.standing.none { color: var(--muted); font-size: 12.5px; line-height: 1.5; background: var(--shade); padding: 12px 14px; }
+
+/* The word and its count share a baseline, so the reading and its arithmetic
+   are one line rather than two things to join up. */
+.standing-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.standing-line b { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+
+/* Which tab this reading comes from. Above the word, because the word alone
+   ("extensive", "Tracing on") does not say what was measured. */
+.standing-tab {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.standing strong {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.standing-what { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.standing-what code { font-size: 11px; }
+
+/* The metal, on the word only. The card keeps the page's surface so a row of
+   three does not read as three different kinds of object. */
+.standing-gold strong   { color: var(--gold-fg); }
+.standing-silver strong { color: var(--silver-fg); }
+.standing-bronze strong { color: var(--bronze-fg); }
+.standing-busy strong   { color: var(--busy-fg); }
+.standing-plain strong  { color: var(--muted); }
+
+/* --- observability: the pipe -----------------------------------------------
+ *
+ * No new colour token. Water is --accent, dry pipe is --line, a broken setting
+ * is --high-fg, and the badge keeps the metals it shares with AI maturity.
+ * There is deliberately no green-to-red ramp: this reports a state, and the
+ * one red is a fault rather than a low score.
+ */
+
+.rp { margin-bottom: 26px; }
+
+.rp-head { margin: 0 0 22px; display: flex; align-items: center; gap: 16px; }
+.rp-head > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/*
+ * The badge.
+ *
+ * A sentence rather than a light. A coloured mark would say this in the one
+ * channel that survives neither greyscale nor a printed screenshot, and "off"
+ * is actionable in a way an unlit dot is not. Weight, not hue, separates the
+ * two states - the word already carries them.
+ */
+.gate {
+  font-style: normal;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+.gate-off { color: var(--muted); font-weight: 600; }
+.rp-head b { font-size: 12.5px; font-weight: 600; color: var(--muted); display: flex; align-items: baseline; gap: 8px; }
+.rp-head .scan-band { font-style: normal; font-weight: 700; font-size: 12px; }
+.rp-head small { font-size: 12.5px; color: var(--muted); max-width: 62ch; line-height: 1.5; margin-top: 2px; }
+
+/*
+ * The run, and the grid the whole diagram is laid out on.
+ *
+ * Each cell is one segment of pipe and the stop it feeds. They used to be flex
+ * items sharing the leftover width; they are grid columns now, because three
+ * other things have to line up with them and none of them could: the tier
+ * captions under the nodes they describe, the drop that leaves the run where
+ * tier 1 ends, and the manifold it feeds. Aligning those against a flexed row
+ * means guessing at a column width, and the guess is wrong the moment a
+ * requirement is added to a tier.
+ *
+ * `--cols` is the number of requirement columns and comes from the component,
+ * so the template follows the table rather than repeating its length. The
+ * trailing `auto` is the terminus, which is wider than a requirement and sizes
+ * itself.
+ *
+ * `--bar` is where the pipe runs inside a row: the middle of a vessel, not the
+ * middle of a cell, because the tag under each node makes the stop taller than
+ * the pipe. Everything that has to meet the pipe - the segments, the top of the
+ * drop, the bottom of the drop - is positioned from this one number.
+ */
+.rp-pipe {
+  /* Handed over by the component, and defaulted here to what the table
+     currently is, so this file still describes a diagram when read on its own.
+     `--cols` is how many requirement columns there are; `--tee` is the column
+     the content branch leaves on; `--at` is where one cell sits. */
+  --cols: 7;
+  --tee: 6;
+  --bar: 22px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr)) auto;
+  align-items: start;
+  padding: 6px 0 0;
+}
+.rp-pipe > .rp-cell { --at: auto; grid-row: 1; grid-column: var(--at); }
+.rp-cell { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; }
+/* Named, not `:last-child`. The terminus stopped being the last thing in the
+   pipe when the caption, the drop and the manifold moved inside it, and the
+   inlet feeding it silently collapsed from a 30px length of pipe to a dot. */
+.rp-cell-end { flex: 0 0 auto; }
+
+.rp-seg {
+  flex: 1 1 auto;
+  min-width: 12px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  /* Aligned to the middle of the vessel, not of the cell: the tag under each
+     node makes the stop taller than the pipe, and centring on the cell would
+     leave the pipe meeting the vessels below their equator. */
+  margin-top: var(--bar, 22px);
+  align-self: flex-start;
+}
+.rp-seg.wet {
+  background: var(--accent);
+  background-image: linear-gradient(
+    100deg,
+    transparent 0 38%,
+    rgb(255 255 255 / 0.35) 50%,
+    transparent 62% 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+}
+
+/* A node and the two words under it. */
+.rp-stop {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 74px;
+  /* The anchor for the panel that opens under each vessel. */
+  position: relative;
+}
+/* The outcome says more about itself than a condition does, and it is the one
+   stop with no neighbour to its right to crowd. */
+.rp-stop-end { width: 96px; }
+/* Short enough elsewhere that the run reads as pipe rather than as dashes,
+   long enough here that the terminus is not hung off a dot. */
+.rp-cell-end .rp-seg { min-width: 30px; }
+.rp-tag { font-style: normal; display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.25; }
+.rp-tag b { font-size: 11.5px; font-weight: 650; letter-spacing: -0.01em; }
+.rp-tag span { font-size: 11px; color: var(--muted); }
+
+/*
+ * A requirement, as a vessel.
+ *
+ * Big enough to hold a water line, which is the whole point of the change: at
+ * 18px a node could only be a filled dot or an empty one, and the state had to
+ * live in a tooltip that touch cannot open and a screenshot does not keep.
+ *
+ * `--fill` is how high the water sits. Set is 86% rather than 100% because a
+ * circle brimmed to the rim has no surface, and the surface is where the wave
+ * is. Colour is never the only channel: the tag under every node says the
+ * state in words.
+ */
+.rp-node {
+  --fill: 30%;
+  --water: var(--murk);
+  position: relative;
+  flex: 0 0 auto;
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  box-sizing: border-box;
+  overflow: hidden;
+  /* A link, not a decoration: it goes to the tab that owns this setting, which
+     is what makes the panel below reachable by keyboard as well as by pointer. */
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rp-node:hover { border-color: var(--accent-strong); }
+.rp-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Set is 76% and not full: the crest hangs 7px above the water line, and at a
+   higher fill it clips off the top of the vessel - which left every set node a
+   flat disc, the one state that most wanted a surface. */
+.rp-node.met { --fill: 76%; --water: var(--accent); border-color: var(--accent); }
+.rp-node.wrong { --fill: 40%; --water: var(--high-fg); border-color: var(--high-fg); }
+
+/*
+ * The water, and the two crests on it.
+ *
+ * Each crest is a disc a little wider than the vessel with a nearly-round
+ * border-radius, hung so only its lower edge shows above the water line.
+ * Rotating it drags that edge up and down, which is a wave; two of them at
+ * different speeds and directions stop the two ends of the cycle matching and
+ * make it read as slosh rather than as a spin.
+ */
+.rp-water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--fill);
+  background: var(--water);
+}
+/*
+ * Each crest is a near-circle wider than the vessel, hung so its crown pokes a
+ * few pixels above the water line and its body sinks into the water below.
+ * Only the crown is ever visible, and rotating a shape whose radii differ by a
+ * few percent drags that crown up and down: a wave.
+ *
+ * It hangs from the TOP of the water and sinks, which is the whole trick. The
+ * first version hung from the water line upward, and since the crest is opaque
+ * it simply filled the rest of the vessel - every node read as full whatever
+ * its fill was.
+ *
+ * Square by aspect-ratio rather than by percentage height, because a rotating
+ * ellipse sweeps rather than undulates.
+ */
+.rp-water::before,
+.rp-water::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 168%;
+  aspect-ratio: 1;
+  margin-left: -84%;
+  background: var(--water);
+  border-radius: 43% 47% 44% 48%;
+}
+.rp-water::after { opacity: 0.5; top: -11px; border-radius: 47% 43% 48% 44%; }
+
+/* The terminus. Larger than the conditions feeding it because it is an
+   outcome and they are conditions, and it fills the same way they do. */
+.rp-end {
+  /* Lower than a requirement's dregs, and for a reason a requirement does not
+     have: the word sits in the middle of this vessel, and it was measured
+     against the panel. Anything that puts murk behind it moves the one figure
+     on this diagram that a contrast test already passed. */
+  --fill: 20%;
+  --water: var(--murk);
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  border-radius: 999px;
+  border: 2px dashed var(--line);
+  background: var(--panel);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+/* The dregs stop a third of the way up, which is what keeps the word above
+   the water line and on the panel where it was measured. */
+.rp-end.on { --fill: 78%; --water: var(--accent); border-style: solid; border-color: var(--accent); }
+.rp-end-word {
+  position: relative;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* On the water rather than under it: --panel is the page's own light surface
+   and reads at 12:1 against the accent, which no token pair here beats. */
+.rp-end.on .rp-end-word { color: var(--panel); }
+
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The box grows out of the vessel rather than appearing beside it, which is
+     what makes it read as belonging to the node it opened from. */
+  /* The panel unrolls rather than appearing: a scroll being opened. The row
+     grows from nothing and the body fades in just behind it, so the text is
+     never legible at a height that is still moving. */
+  .rp-scroll:target { animation: unroll 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+  .rp-scroll:target .rp-scroll-body { animation: unroll-body 260ms ease-out; }
+  .rp-water::before { animation: slosh 7s linear infinite; }
+  .rp-water::after { animation: slosh 11s linear infinite reverse; }
+  /*
+   * Murk moves, but sluggishly. Same wave, two and a half times the period:
+   * the difference between water being pushed along and water sitting. It is
+   * the one cue here that survives a colour-blind reader and a greyscale
+   * screenshot both, and it costs nothing but a number.
+   */
+  .rp-node.missing .rp-water::before,
+  .rp-end:not(.on) .rp-water::before { animation-duration: 18s; }
+  .rp-node.missing .rp-water::after,
+  .rp-end:not(.on) .rp-water::after { animation-duration: 27s; }
+  .rp-seg.wet { animation: flow 3.5s linear infinite; }
+  /* Held back a tenth of a second, so sweeping the pointer across the row
+     does not flash seven boxes on the way to the one being aimed at. */
+  .rp-say {
+    transition:
+      clip-path 240ms cubic-bezier(0.2, 0.8, 0.3, 1) 110ms,
+      opacity 150ms ease 110ms;
+  }
+}
+
+@keyframes unroll {
+  from { grid-template-rows: 0fr; }
+  to { grid-template-rows: 1fr; }
+}
+
+@keyframes unroll-body {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slosh {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* The highlight travels the length of a wet segment: water moving, not water
+   sitting. Off-screen at both ends so nothing appears or vanishes mid-pipe. */
+@keyframes flow {
+  from { background-position: -120% 0; }
+  to { background-position: 220% 0; }
+}
+
+/*
+ * The panel a node opens, unrolled at the foot of the diagram.
+ *
+ * `:target`, so one is open at a time and the open one is in the URL - which
+ * is what lets a link land on a node already open, and what makes the browser
+ * scroll to it without a line of script. See RequirementScroll.tsx.
+ *
+ * `display: none` on the shut ones rather than height zero: seven panels of
+ * real content would otherwise all be in the layout, and the animation below
+ * needs a start state that measures nothing.
+ */
+.rp-scroll { display: none; }
+.rp-scroll:target {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.rp-scroll-wrong:target { border-left-color: var(--high-fg); }
+.rp-scroll-met:target { border-left-color: var(--ok-fg); }
+
+/* The row that grows. A grid row can be animated from 0fr to 1fr, which is the
+   one way to unroll to a height nobody has had to measure and hard-code. */
+.rp-scroll-body { overflow: hidden; min-height: 0; padding: 14px 16px 16px; }
+
+.rp-scroll-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin: 0 0 8px; }
+.rp-scroll-head > b { font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; }
+.rp-scroll-icon { display: inline-flex; color: var(--muted); }
+.rp-scroll-shut { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.rp-scroll-shut:hover { text-decoration: underline; }
+.rp-scroll-what { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); line-height: 1.55; max-width: 72ch; }
+
+/* Label and value in two columns, so the three questions a reader arrives with
+   - what is it now, what do I type, what does it buy - line up down the page
+   instead of being three paragraphs to sort out. */
+.rp-scroll-facts { display: grid; gap: 9px; margin: 0; }
+.rp-scroll-facts > div { display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: baseline; }
+.rp-scroll-facts dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.rp-scroll-facts dd { margin: 0; font-size: 12.5px; line-height: 1.55; max-width: 72ch; }
+
+/* The line to copy, on its own row and in the shade the code samples use, so
+   it reads as the thing to take away rather than as more prose. */
+.rp-scroll-alt { display: block; margin-top: 7px; font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+
+.rp-scroll-line {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--shade);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+@media (max-width: 720px) {
+  .rp-scroll-facts > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/*
+ * The captions, on the run's own columns.
+ *
+ * Each spans the requirements it describes, so "Spans 0 of 2" begins under the
+ * first of the two vessels it is counting. As a flex row growing by tier size
+ * it was always a few nodes out, because the terminus column is in the run's
+ * width and not in a tier's - which is why this stops one column short of the
+ * end rather than spanning the lot.
+ */
+.rp-legend {
+  /* Row 2. The run is row 1, and the tier marks that used to sit between the
+     two are gone - so the captions are what says where a tier ends. */
+  grid-row: 2;
+  grid-column: 1 / -2;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  margin: 14px 0 0;
+  padding: 0;
+}
+.rp-legend > li { --span: 1; grid-column: span var(--span); min-width: 0; padding-right: 14px; }
+/* The drop comes down on the boundary between two tiers, which is exactly
+   where the second caption starts. It steps aside by the width of the pipe. */
+.rp-legend > li + li { padding-left: 18px; }
+
+.rp-legend-name { display: block; font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+.rp-legend-name b { font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.rp-legend-what { display: block; font-size: 11.5px; color: var(--muted); }
+.rp-legend-go { display: inline-block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.rp-legend-go:hover { text-decoration: underline; }
+
+/*
+ * The drop: the content branch leaving the run.
+ *
+ * It comes down on the column where tier 1 ends, because that is the rule it
+ * is drawing - the words are attributes hung on the events, so nothing travels
+ * until everything that makes an event is set. The component reads the column
+ * off the tier and hands it over as `--tee`, so adding a requirement to tier 1
+ * moves the drop with it.
+ *
+ * It spans the run row and the caption row, and then goes `--bar` further:
+ * negative margin is what lets one element start on the pipe above and finish
+ * on the pipe below without either row having to know the other's height.
+ */
+.rp-drop {
+  grid-column: var(--tee);
+  grid-row: 1 / 4;
+  align-self: stretch;
+  justify-self: start;
+  width: 10px;
+  margin-top: var(--bar);
+  /* Five pixels past the manifold's own bar, so the two meet inside the joint
+     rather than at a seam that shows up as a hairline at some zoom levels. */
+  margin-bottom: calc(var(--bar) * -1 - 5px);
+  border-radius: 999px;
+  background: var(--line);
+}
+.rp-drop.wet { background: var(--accent); }
+
+/*
+ * The manifold: the four content settings, and what they add up to.
+ *
+ * Same idiom as the run - segment, vessel, segment, vessel, terminus - with
+ * one difference that is the whole point of drawing it this way. Every segment
+ * here shares a single wetness. On the run above, a segment is wet only if
+ * everything upstream of it is set, which is what makes the run a run; these
+ * four do not depend on each other at all, and a pipe that dried up at the
+ * first unset one would assert a dependency that does not exist. It is the
+ * same argument the tier-3 branch is drawn by.
+ */
+.rp-manifold {
+  grid-row: 4;
+  grid-column: 1 / -1;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  /* The bar sits `--bar` down, like every other length of pipe on the page;
+     the taps start where it ends. */
+  padding-top: calc(var(--bar) + 10px);
+}
+.rp-main {
+  position: absolute;
+  top: var(--bar);
+  left: 0;
+  right: 0;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.rp-main.wet, .rp-stub.wet { background: var(--accent); }
+
+/* One tap: the short pipe down from the bar, and the vessel on the end of it. */
+.rp-tap { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.rp-tap-end { flex: 0 0 auto; width: 110px; }
+.rp-stub { width: 10px; height: 16px; border-radius: 999px; background: var(--line); }
+
+/* The caption for the branch, under the vessels it explains. Says the two
+   things the drawing cannot: that these are optional, and that nothing on this
+   page counts them. */
+.rp-manifold-say { grid-row: 5; grid-column: 1 / -1; margin: 12px 0 0; }
+.rp-manifold-say em {
+  display: block;
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 4px;
+  max-width: 78ch;
+}
+
+/*
+ * Tier 3: the riser, and the vessel on the end of it.
+ *
+ * The hook is a source rather than a stage, so it is drawn feeding the
+ * terminus from below rather than sitting in the line. Everything else here
+ * runs downhill into something; this is the one thing pumped in, and the
+ * caption beside it says why.
+ *
+ * The riser stops at the top of its own row, which is where the vessel starts,
+ * so neither has to know the other's height. `margin-top` clears the terminus
+ * vessel above it - 78px is that vessel, and the two are the same number
+ * because they are the same circle.
+ */
+.rp-riser {
+  grid-column: -2 / -1;
+  grid-row: 1 / 3;
+  align-self: stretch;
+  justify-self: end;
+  width: 10px;
+  /* Below the terminus, and centred on it: half the 96px stop, less half the
+     pipe. The same arithmetic the drop does against its own column. */
+  margin: 78px 43px 0 0;
+  border-radius: 999px;
+  background: var(--line);
+}
+.rp-riser.wet { background: var(--accent); }
+
+.rp-feed {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  /* Caption hard left, vessel hard right, and the gap between them is the lane
+     the content drop comes down. Packed against the vessel instead, the words
+     sat under the drop and the pipe ran through the middle of a sentence. */
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+}
+/* The terminus stop's width, so this vessel sits under that one rather than
+   11px to the left of it. */
+.rp-feed .rp-stop { width: 96px; }
+/* 46% keeps the words clear of the drop at every width the row survives at:
+   the drop comes down at the tier boundary, which is five columns of seven. */
+.rp-feed-say { min-width: 0; max-width: min(54ch, 46%); }
+.rp-feed-say em {
+  display: block;
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+/*
+ * The hover note.
+ *
+ * A preview of the panel, opening from the vessel's own corner and unrolling
+ * down and to the right. Never the only channel for anything in it: the tag
+ * under the vessel carries the name and the state, the panel carries the rest,
+ * and the link's `aria-label` carries all of it at once - which is why this is
+ * `aria-hidden` and why the state was taken out of a tooltip in the first
+ * place. This is for the reader sweeping the row and deciding which circle to
+ * click, and it is allowed to disappear on touch and on a screenshot.
+ *
+ * `clip-path` rather than a scale transform: the box is uncovered from its
+ * top-left corner to its bottom-right at the size it will settle at, so no
+ * text is ever legible at a size that is still moving.
+ *
+ * It stays in the layout while shut, which is what the `rp-anchor-end` rule
+ * below is about - an invisible absolutely positioned box still counts towards
+ * the page's scroll width, and a horizontal scrollbar with no visible cause is
+ * a UI check failure that takes an afternoon to find.
+ */
+.rp-say {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 250px;
+  max-width: 56vw;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.22);
+  text-align: left;
+  font-style: normal;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(0 100% 100% 0);
+}
+/* The two stops at each end open inward. See the comment above. */
+.rp-anchor-end .rp-say { left: auto; right: 0; }
+
+.rp-say > b {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.rp-say > b em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted); }
+.rp-say > span { display: block; margin-top: 5px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+/* The line to type, in the same shade the panel sets it in, so the two read
+   as the same thing said twice rather than as two different instructions. */
+.rp-say-env {
+  display: block;
+  margin-top: 7px;
+  padding: 6px 8px;
+  background: var(--shade);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-all;
+}
+.rp-say > i { display: block; margin-top: 7px; font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); }
+
+/* Focus as well as hover: the vessel is a link, and a reader arriving on it by
+   keyboard is the one with the least else to go on. */
+.rp-stop:hover, .rp-stop:focus-within { z-index: 40; }
+.rp-stop:hover .rp-say,
+.rp-stop:focus-within .rp-say { opacity: 1; clip-path: inset(0); }
+
+/* --- the requirement cells, on the hygiene list --------------------------- */
+
+.req-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 4px;
+  font-size: 13.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.reqs {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.req {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 12px 14px;
+  /*
+   * A grid item's min-width is `auto`, which is its content's min-content
+   * width - and `.req-found code` sets `white-space: pre` around a whole shell
+   * command. Without this the track grows to fit the longest command and the
+   * document scrolls sideways at phone width, which a UI check caught.
+   */
+  min-width: 0;
+}
+/* Dashed for what is not there, solid for what is - the same distinction
+   `.cap.off` draws on the maturity page, so the two grids read alike. */
+.req.missing { background: none; border-style: dashed; }
+.req.wrong { border-color: var(--high-fg); }
+
+.req-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+/* The variable name is the thing being looked up, so it wraps rather than
+   truncating: a cut-off env var is one nobody can copy. */
+.req-name code { font-size: 12px; font-weight: 600; word-break: break-word; }
+.req-name .pill { margin-left: auto; }
+
+.req-what { margin: 0 0 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.req-finding { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; }
+
+.req-found { margin: 0 0 6px; }
+.req-found code {
+  display: block;
+  background: var(--shade);
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-size: 11.5px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.req-fix {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 6px;
+}
+.req-fix code { font-size: 11.5px; word-break: break-word; }
+
+/* The settings files, one per line. An absolute path wraps mid-path, so three
+   of them separated by spaces is unreadable at exactly the moment the reader
+   is checking which file was looked at. */
+.scan-files { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+.scan-files i { font-style: normal; color: var(--muted); }
+
+/* --- trace: the controls, the run list, the charts -------------------------- */
+
+.trace-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.trace-controls .picker-form { flex: 1 1 320px; min-width: 0; margin: 0; }
+/* The window control is a radio group wearing the segmented filter's clothes,
+   so the two devices that narrow a page look like one device. */
+.trace-controls .segmented { margin-bottom: 0; flex: 0 0 auto; }
+.segmented label {
+  font-size: 12.5px;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.segmented label:hover { color: var(--text); }
+.segmented label.on {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+/* The radio itself is the accessible control and stays focusable; the label
+   around it carries the appearance. */
+.segmented label input { position: absolute; opacity: 0; width: 0; height: 0; }
+.segmented label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.trace-layout {
+  display: grid;
+  /* Wider than it was. The run list carries four columns now - id, when, cost
+     and tools - and two of them are a figure over a row of marks. At 268px the
+     marks wrapped under their own figures, which is a column of measurements
+     that no longer line up with each other. */
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+/* min-width 0 so the tree's long bodies scroll inside their own row rather
+   than widening the column they sit in. */
+.trace-main { min-width: 0; }
+
+.runs {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  /* Sticky, because choosing the next run to look at is what you come back to
+     this column for after scrolling a long tree. */
+  position: sticky;
+  top: 18px;
+  overflow: hidden;
+}
+.runs-head {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+/* The heading is a row now: the title and its count on the left, the collapse
+   control hard right. Grid rather than flex so the count sits under the title
+   and the button stays centred against both. */
+.runs-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+.runs-head span {
+  grid-column: 1;
+  display: block;
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+/* The count keeps its place when the rows go, so collapsing the list hides the
+   runs and never the figure. */
+.runs-toggle { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+
+/* A control that is only an icon. Square, so the hit area is a target rather
+   than the glyph's own bounding box - 28px is the smallest that stays
+   comfortable, and the label is on it as a `title` and as visually-hidden text
+   because an icon alone has no accessible name. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+.icon-btn:hover { background: var(--shade); color: var(--text); border-color: var(--line); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.icon-btn svg { display: block; }
+
+/* The column header. Same grid as the rows under it, so the labels sit over
+   the things they name rather than near them. */
+.runs-cols,
+.run {
+  display: grid;
+  grid-template-columns: auto 1fr minmax(0, 70px) minmax(0, 72px);
+  gap: 1px 8px;
+}
+.runs-cols {
+  padding: 4px 14px;
+  background: var(--shade);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* Heading and gear in one cell. The gear is a second affordance in the same
+   place as the sort, so they are separate buttons and never the same click. */
+.runs-col { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.runs-col:not(:first-child) { justify-content: flex-end; }
+.runs-col form { margin: 0; min-width: 0; }
+
+/* The sortable label. A button that does not look like one until you reach for
+   it: a column heading that shouted would compete with the figures under it,
+   which are the page. */
+.col-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 0;
+}
+.col-sort:hover { color: var(--text); }
+.col-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.col-sort.on { color: var(--text); }
+/* Reserves its own width whether or not there is an arrow in it, so the
+   headings do not shift sideways as the sorted column changes. */
+.col-arrow { display: inline-block; min-width: 9px; font-size: 11px; line-height: 1; }
+
+/* The gear only appears once the dialog it opens can be opened - see the note
+   on `mounted` in BandSettings. Until then the column is a heading and the
+   rule is still readable in every cell's own tooltip. */
+.runs-col .gear { display: none; width: 20px; height: 20px; }
+.runs-col.has-gear .gear { display: inline-flex; }
+
+/* Its own scroller, so a project with hundreds of runs does not push the tree
+   down the page to reach them. */
+.runs-scroll { max-height: min(66vh, 700px); overflow-y: auto; }
+.runs-scroll ul { list-style: none; margin: 0; padding: 0; }
+.runs-scroll form { margin: 0; }
+
+.run {
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.run:hover { background: var(--shade); }
+/* The bar and the weight together, because the tint alone is close enough to
+   the hover state to be ambiguous on the row the pointer happens to be over. */
+.run.on { background: var(--accent-tint); border-left-color: var(--accent); }
+
+/* The id is the handle: what the export is named after and what a bug report
+   quotes. Monospace so two ids can be compared character by character. */
+.run-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+.run.on .run-id { color: var(--accent-strong); }
+.run-when { font-size: 11.5px; color: var(--muted); }
+
+/*
+ * A cost or tool-call cell: the figure, and the marks under it.
+ *
+ * Stacked rather than side by side. Beside each other they were as wide as
+ * their longest figure, so a column holding $1,825.07 and $0.82 put their
+ * marks in two different places - and the marks are the thing you scan a
+ * column of. Stacked, every row's marks sit on the same vertical line.
+ */
+.run-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.run-fig {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.run.on .run-fig { color: var(--text); }
+
+/*
+ * The band, as marks you can count.
+ *
+ * The same device as the capability chevrons, and the same three channels: the
+ * count is the reading, the metal reinforces it, and the figure is printed
+ * above it as text. Unfilled marks stay as faint outlines rather than
+ * disappearing, so the distance to the top band is visible in the same glyph -
+ * two rows whose marks are different widths cannot be compared down a column.
+ *
+ * A measured zero and an unmeasured figure both draw no filled marks. What
+ * separates them is the line above: a figure, or an em dash. That is the whole
+ * of the distinction, and it is why the figure is never optional.
+ */
+.marks { display: inline-flex; gap: 1px; color: var(--muted); }
+.marks svg { display: block; }
+.mark { opacity: 0.22; }
+.mark.on { opacity: 1; color: var(--mark-fg); }
+.marks-1 { --mark-fg: var(--bronze-fg); }
+.marks-2 { --mark-fg: var(--silver-fg); }
+.marks-3 { --mark-fg: var(--gold-fg); }
+
+/*
+ * The small dialogs a column heading opens: the date filter on Ended, and the
+ * thresholds on Cost and Tools.
+ *
+ * One class for all three, because they are one device - a control that lives
+ * in the heading of the thing it changes, rather than in a settings panel
+ * somewhere else that the reader has to go and find while looking at a column
+ * they have a question about.
+ *
+ * `<dialog>` with `showModal`, so focus trapping, Escape and the inert page
+ * behind it are the browser's rather than hand-rolled. The backdrop is dimmed
+ * from a plain black at low alpha rather than a token: it sits over whatever
+ * the page is, in either theme, and a token would have to be defined against
+ * both surfaces to say the same thing.
+ */
+.mini-dialog {
+  /* The dialog lives inside the column heading it belongs to, so it inherits
+     that row's small uppercase type - which turned every sentence in it into a
+     shout. `showModal` moves it to the top layer for painting but not out of
+     the DOM, so the type has to be re-stated here rather than assumed. */
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  padding: 20px 22px 18px;
+  max-width: min(440px, calc(100vw - 32px));
+}
+.mini-dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+.mini-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.mini-dialog .note { margin: 0 0 14px; }
+.bands-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.bands-row label {
+  flex: 1 1 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+.bands-row input {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--ground);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.bands-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.bands-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+/* The one-click answers, above the boxes they fill in. They are how a reader
+   discovers what the boxes are for, as well as the fast way to the commonest
+   range - which is why they are not hidden behind the exact dates. */
+.filter-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+.filter-presets .btn { font-size: 12px; padding: 5px 11px; }
+
+/* A filter that is on says so on the control that set it, not only in the
+   heading above the rows. */
+.icon-btn.gear.on { color: var(--accent-strong); background: var(--accent-tint); border-color: var(--accent); }
+
+/* The bar above the tree, and the totals under it. */
+.rc-top { margin-bottom: 14px; }
+.rc-top .rc-bar { margin-bottom: 8px; }
+.rc-top .rc-badge { margin: 0; }
+
+
+/* --- where the run's money went -------------------------------------------- */
+
+/*
+ * The bar's legend: the total, the four classes it divides into, and the count
+ * that is not money.
+ *
+ * These replaced both a row of four bare figures and a whole section further
+ * down the page carrying the same four classes under a heading. One object in
+ * the place the reader is already looking beats two objects agreeing with each
+ * other twenty lines apart.
+ *
+ * The icon carries the class colour; the shape carries the meaning. That order
+ * matters: the four hues are the model-mix palette, measured against each
+ * other for separation, but a reader who cannot tell them apart still has four
+ * different glyphs and four written labels. Colour ties a chip to its segment
+ * and does nothing else, which is the only job it is allowed here.
+ *
+ * The text stays on the pair this file measures - `--text` and `--muted` on
+ * `--shade` - and only the glyph takes the mix colour. Tinting the chip itself
+ * would put its label on a surface nothing has checked, which is the bug the
+ * badge-chip rule in tests/styles.test.ts exists for.
+ */
+.rc-badge {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+.rc-chip {
+  --i: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: var(--shade);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+/*
+ * The figure wears its class, not just the glyph beside it.
+ *
+ * The row used to be six identical grey pills, and the only thing separating
+ * them was a 14px icon - so the four classes the bar above is drawn in had no
+ * counterpart in the figures that read it, and matching a chip to its segment
+ * meant matching a shape. The number, the glyph and the rim now carry the
+ * class together.
+ *
+ * `--ink-*` rather than `--mix-*`, and the palette comment on them says why: a
+ * segment is a graphic and a figure is text, and one of the four does not
+ * clear the text floor on the surface a chip wears.
+ *
+ * The label stays `--muted`. It names the figure rather than being one, it is
+ * 11.5px, and `--muted` on `--shade` is a pair this file already measures.
+ */
+.rc-chip b { font-size: 13px; font-weight: 700; color: var(--chip-fg, var(--text)); font-variant-numeric: tabular-nums; }
+.rc-chip-label { white-space: nowrap; }
+.rc-chip-icon { display: inline-flex; flex: none; color: var(--chip-fg, var(--muted)); }
+.rc-chip-icon svg { display: block; width: 14px; height: 14px; }
+
+.rc-chip.rc-input { --chip-fg: var(--ink-1); border-color: var(--ink-1); }
+.rc-chip.rc-cacheRead { --chip-fg: var(--ink-2); border-color: var(--ink-2); }
+.rc-chip.rc-cacheWrite { --chip-fg: var(--ink-3); border-color: var(--ink-3); }
+.rc-chip.rc-output { --chip-fg: var(--ink-4); border-color: var(--ink-4); }
+/* The total is the sum of the four, not a fifth class, so it takes the page's
+   own ink rather than a colour that would read as another category. */
+.rc-chip.rc-total { --chip-fg: var(--text); border-color: var(--line); }
+.rc-chip.rc-tools { --chip-fg: var(--muted); }
+
+/*
+ * They land one after another, left to right, behind the bar filling above
+ * them.
+ *
+ * Transform only, and that is the rule rather than the taste. These are
+ * readings - the total and the four classes it divides into - and a figure may
+ * never be absent from a page that has it. The first version faded them in
+ * from nothing on a staggered delay, which held the last chip at opacity 0 for
+ * most of a second and a UI check caught it as missing, exactly as it caught
+ * the staggered fade on the capability cells that this file already has a note
+ * about. Every chip is fully legible in the first painted frame; what the
+ * animation moves is where it sits, not whether it is there.
+ *
+ * A small overshoot rather than a slide: a bounce is a thing landing, and
+ * these are being placed under a bar that has just finished drawing. The
+ * offset it lands from is deliberately slight - enough to be a movement, not
+ * enough that the row looks misaligned while it waits its turn.
+ *
+ * The delay is the chip's index, so the row assembles in the order it is read:
+ * the total, then where the total went, then what the run did.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .rc-chip {
+    animation: rc-pop 340ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    animation-delay: calc(420ms + var(--i) * 65ms);
+  }
+}
+
+@keyframes rc-pop {
+  from { transform: scale(0.94) translateY(3px); }
+  to { transform: none; }
+}
+
+/* Stated where it matters and nowhere else: only a run with an unpriced model
+   has a total that is short. */
+.rc-short { margin: 0 0 12px; max-width: 88ch; }
+
+.rc-bar {
+  display: flex;
+  height: 18px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--shade);
+  /* The shutter below is positioned against this. */
+  position: relative;
+}
+.rc-seg { min-width: 2px; }
+
+/*
+ * The bar fills like something downloading, and the classes keep their colours
+ * as it goes.
+ *
+ * It is a shutter, not a reveal: `::after` starts covering the whole bar,
+ * painted in the bar's own empty-track colour with a terminal-green cursor on
+ * its left edge, and slides off to the right. What it uncovers is the finished
+ * bar underneath, so the segments arrive left to right in their own colours
+ * without anything about them being animated - and the cursor is the shutter's
+ * own edge, which is why it cannot drift out of step with the fill. A second
+ * animation racing the first at a constant speed would have, because the
+ * segments are as wide as their share and the fill front is not linear.
+ *
+ * It used to advance in eighteen discrete steps, which read as a byte count
+ * going up. Smooth now, and slower: the ratchet was legible on its own and
+ * fought the chips that arrive under it, which land one at a time - two
+ * stuttering rhythms at once on one object, and neither could be followed. The
+ * easing keeps the character the steps were there for by starting fast and
+ * settling, the way something that is loading actually behaves.
+ *
+ * Decoration over a reading that is already complete: the totals are printed
+ * under the bar and painted at once, the segments carry their own tooltips,
+ * and the accessible name on the bar states every share in words. With motion
+ * off there is no shutter at all, which is why its resting state is off to the
+ * right rather than covering anything.
+ */
+.rc-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--shade);
+  border-left: 3px solid var(--term-key);
+  transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rc-bar::after { animation: rc-load 820ms cubic-bezier(0.22, 0.9, 0.28, 1) 100ms both; }
+}
+
+@keyframes rc-load {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+/* The four classes, drawn in the model-mix palette: four categories already
+   measured against each other for hue and lightness separation, rather than
+   four new colours nobody has checked. */
+/* Scoped to the segment. These class names are also modifiers on the key rows
+   below, and unscoped they painted a solid mix colour behind the key's muted
+   text - 1:1 contrast, which a UI check caught. */
+.rc-seg.rc-input { background: var(--mix-1); }
+.rc-seg.rc-cacheRead { background: var(--mix-2); }
+.rc-seg.rc-cacheWrite { background: var(--mix-3); }
+.rc-seg.rc-output { background: var(--mix-4); }
+.rc-seg.rc-none { background: var(--line); width: 100%; }
+
+
+/* --- the run, as a terminal ------------------------------------------------
+ *
+ * The tree gets its own surface rather than the page's. It is the one place
+ * here that shows raw machine output - prompts, arguments, results, verbatim -
+ * and a terminal is what that has always looked like. Every colour is one of
+ * the five --term-* tokens, which are measured pairs like the rest of the
+ * palette; see the note beside them for why this can be green where the live
+ * feed could not.
+ */
+.term-panel {
+  background: var(--term-bg);
+  border: 1px solid var(--term-line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--term-fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.term-panel .note { color: var(--term-dim); }
+
+/*
+ * The control that draws more of a long run.
+ *
+ * Sits under the terminal panel rather than inside it: it is this page talking
+ * about the run, not part of the run. The count above the button is the whole
+ * point of it, so the two are one block and never wrap apart.
+ */
+.trace-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.trace-more .note { margin: 0; }
+.trace-more-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+
+.term-panel .tr { border-left-color: var(--term-line); }
+.term-panel .tr > summary:hover { background: rgb(255 255 255 / 0.05); }
+.term-panel .tr > summary::before { color: var(--term-dim); }
+.term-panel .tr-label { color: var(--term-fg); }
+.term-panel .tr-ms { color: var(--term-dim); }
+/* The kind is the prompt in this shell: the one part that is a label rather
+   than content, so it takes the phosphor and everything else stays legible. */
+.term-panel .tr-kind { color: var(--term-key); }
+.term-panel .tr-kind::before { content: "$ "; opacity: 0.55; }
+.term-panel .tr-src { background: rgb(255 255 255 / 0.08); color: var(--term-dim); }
+.term-panel .tr-facts dt { color: var(--term-dim); }
+.term-panel .tr-facts dd { color: var(--term-fg); }
+.term-panel .tr-body pre {
+  background: rgb(255 255 255 / 0.045);
+  border: 1px solid var(--term-line);
+  color: var(--term-fg);
+}
+.term-panel .tr-prompt > summary .tr-label { color: var(--term-key); font-weight: 700; }
+.term-panel .tr-subagent > summary .tr-label { color: var(--term-key); }
+.term-panel .dash { color: var(--term-dim); }
+.term-panel .tr > summary:focus-visible { outline-color: var(--term-key); }
+
+/* Visually hidden, still read aloud. The arrow in a caption's link is
+   decorative, so the destination has to be in the accessible name some other
+   way. */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  /* The list goes above the tree rather than beside it, and stops being
+     sticky: a pane pinned to the top of a narrow screen is a pane covering
+     the thing it was used to choose. */
+  .trace-layout { grid-template-columns: 1fr; }
+  .runs { position: static; }
+  .runs-scroll { max-height: 320px; }
+}
+
+@media (max-width: 760px) {
+  .reqs { grid-template-columns: 1fr; }
+  .gate { font-size: 19px; }
+  /*
+   * The pipe turns and runs down the page. Same markup: the row becomes a
+   * column, the segments become risers and each node sits under the one that
+   * feeds it - which is the same claim the horizontal run makes, in the only
+   * direction that has room at 320px.
+   */
+  /*
+   * The pipe turns and runs down the page, and each stop turns with it: the
+   * vessel keeps the axis, the tag moves to its right where there is room for
+   * two words on one line instead of two lines under a 52px circle.
+   */
+  /* One column, and everything in the grid gives up its placement: a run that
+     is already vertical has no columns for a caption or a branch to line up
+     with, and a drop that is meant to go downwards has nothing left to say. */
+  .rp-pipe { grid-template-columns: minmax(0, 1fr); padding-left: 4px; }
+  /* Every child by name, not `> *`. A cell placed in column 5 of a one-column
+     grid does not fall back into column 1 - it makes column 5 - so the row
+     stayed a row, and the two captions under it were squeezed to one word per
+     line by the eight implicit columns they were sharing. */
+  .rp-pipe > .rp-cell,
+  .rp-pipe > .rp-legend,
+  .rp-pipe > .rp-drop,
+  .rp-pipe > .rp-riser,
+  .rp-pipe > .rp-feed,
+  .rp-pipe > .rp-manifold,
+  .rp-pipe > .rp-manifold-say { grid-column: 1; grid-row: auto; }
+  .rp-cell { flex-direction: column; align-items: flex-start; width: 100%; }
+  .rp-seg { width: 10px; min-width: 0; height: 20px; margin: 0 0 0 21px; align-self: flex-start; }
+  /* `min-width` too, or the terminus inlet keeps the 30px it is given in the
+     row and comes down the column as a blob rather than as a riser. */
+  .rp-cell-end .rp-seg { min-width: 0; margin-left: 28px; }
+  .rp-stop { flex-direction: row; align-items: center; gap: 12px; width: auto; }
+  .rp-tag { align-items: flex-start; text-align: left; }
+  /* The captions cannot sit under a column, so they stack as a list beneath. */
+  .rp-legend { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 16px; }
+  .rp-legend > li { grid-column: 1; padding-right: 0; }
+  /* Nothing comes down between them at this width, so nothing steps aside. */
+  .rp-legend > li + li { padding-left: 0; }
+  /* The drop becomes another riser in the column, the length of the ones the
+     run is already made of. */
+  .rp-drop { align-self: start; height: 24px; margin: 0 0 0 21px; }
+  /* The bar turns with the run: it becomes the riser the taps hang off, down
+     the left of the column, and each tap turns into a stop beside it. */
+  /* The riser has nothing to rise past: the terminus is one row above its own
+     vessel already. It becomes another link in the column. */
+  .rp-riser { align-self: start; height: 24px; margin: 0 0 0 21px; }
+  .rp-feed { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .rp-feed .rp-stop { width: auto; }
+  .rp-manifold { flex-direction: column; align-items: flex-start; padding-top: 0; padding-left: 0; }
+  .rp-main { top: 0; bottom: 0; left: 21px; right: auto; width: 10px; height: auto; }
+  .rp-tap { flex: 0 0 auto; align-items: flex-start; width: 100%; }
+  .rp-tap-end { width: 100%; }
+  .rp-stub { height: 20px; margin-left: 21px; }
+  /* Nothing here can be hovered, and a 250px box positioned off a vessel at
+     320px is a horizontal scrollbar. Everything it says is on the panel the
+     vessel opens. */
+  .rp-say { display: none; }
+  .gate { font-size: 19px; }
+  .trace-controls { gap: 12px; }
+  /* Three readings cannot share a row at this width; they stack, and the band
+     keeps its place at the top because it is the one about the figure above. */
+  .standings { flex-direction: column; }
+}
+
+/* --- live feed terminal ---------------------------------------------------
+ *
+ * A log view, styled to read like one. Every colour here is an already-measured
+ * pair: text and muted on --shade both clear AA in light and dark, which is
+ * why the terminal is not the black-on-phosphor-green it wants to be. A
+ * palette that fails contrast is one nobody can read at 8am.
+ */
+.term {
+  background: var(--shade);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  /* Tall enough to read as a stream, capped so it never pushes the page. */
+  max-height: 420px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.term-line { display: flex; gap: 10px; align-items: baseline; white-space: nowrap; }
+.term-ts { color: var(--muted); flex: none; }
+.term-name { color: var(--text); font-weight: 600; flex: none; }
+.term-attrs { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.term-attrs b { color: var(--text); font-weight: 500; }
+.term-empty { color: var(--muted); }
+
+/* The live toggle. A button, not a decoration: it is the only way to stop the
+   page querying on a timer, and it has to be reachable by keyboard. */
+.live {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.live:hover { border-color: var(--accent); }
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); flex: none;
+}
+.live-dot.on { background: var(--accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot.on { animation: pulse 2s ease-in-out infinite; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* --- dashboard redesign ---------------------------------------------------
+ *
+ * The dataviz rules this file has to hold up: one filter row above everything
+ * it scopes, exactly one hero figure per view, icons at the muted step so they
+ * never compete with a number, and hairline recessive chrome.
+ */
+
+/* One row, above the charts, left-aligned. Not per-chart: every figure on the
+   page is the same slice, and a per-chart range is how two numbers on one
+   screen end up disagreeing. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.segmented.subtle a { font-size: 12px; }
+
+/* Exactly one hero per view. Proportional figures, same sans as everything
+   else - a display face here reads as decoration. */
+.hero-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 270px);
+  gap: 14px;
+  /* Each column as tall as what is in it, not as tall as the other one.
+     Stretching was how the old three-cornered card filled itself: the figure
+     and the coins went to opposite corners and the mix strip held the floor
+     between them. Read top to bottom instead, there is nothing to send to the
+     floor, and stretching just left a hand's width of empty panel under the
+     rows - worse than a ragged bottom edge, because an empty panel reads as
+     something that failed to load. */
+  align-items: start;
+}
+/*
+ * Two columns: the money on the left, the pile of it on the right.
+ *
+ * The left column is one reading in four parts, stacked in the order you would
+ * say them out loud - what it cost, what that figure is, the bar it divides
+ * into, and which models those divisions are. The coins are the one thing that
+ * is not part of that sentence, so they get the other column.
+ *
+ * This replaced a three-cornered layout - figure top-left, coins bottom-right,
+ * mix strip across the floor - where the split was as far from the figure as
+ * the card allowed. Nothing was wrong with any one piece; they just did not
+ * read as being about the same number.
+ */
+.hero {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 28px;
+}
+/* The figure and everything that divides it, in one column. It takes the slack
+   so the bar under the number is as wide as the card allows - that width is
+   what makes it read as the figure's underline rather than as a chip. */
+.hero-main { flex: 1 1 300px; min-width: 0; }
+
+/* The unit chart. `height: auto` with the viewBox doing the work is what keeps
+   a ten-column stack from forcing the page sideways on a phone - the one
+   responsive bug the UI checks fail the build over. */
+.coins {
+  margin: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Top of its column, so the stack starts at the same line as the figure it
+     is a second reading of. It used to sit on the card floor, which worked
+     when the mix strip ran underneath both of them and gave it something to
+     stand on; with the mix now in the left column there is no floor there to
+     sit on, only a hole above it. */
+  justify-content: flex-start;
+}
+.coins svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-left: auto;
+}
+.coins figcaption {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/*
+ * The stack, built rather than printed.
+ *
+ * Each coin falls the last few units into its place, bottom of the first
+ * column first, in the order the stack was counted. `--drop` is when this one
+ * lands and is written by the component, because the delay depends on how
+ * many coins there are; the default here is zero so the property always
+ * resolves, and so the token is declared in this file like every other one.
+ *
+ * The budget is fixed at the component end, so a hundred coins land in the
+ * same second as three. That matters more than it sounds: a drop that took
+ * longer for a bigger figure would be the picture saying something the
+ * caption had already said in words, slowly.
+ *
+ * `both` fill holds a coin above its place until its turn, so for a moment
+ * the stack is shorter than the figure. That is allowed here and nowhere
+ * else: the caption beside it is painted immediately and carries the count,
+ * the value of one coin and the remainder, so nothing about the total is
+ * known only to the animation. And a reader who asked for stillness gets the
+ * finished stack, which is the state this rule is written as decoration over.
+ */
+.coin { --drop: 0ms; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .coin {
+    animation: coin-drop 460ms cubic-bezier(0.45, 0.05, 0.3, 1) both;
+    animation-delay: var(--drop);
+  }
+}
+
+/* The units are the viewBox's, not the screen's: a coin's pitch is 6.5, so
+   this is a fall of about four coins. The dip past zero is the landing - a
+   stack settles, it does not stop dead. */
+@keyframes coin-drop {
+  0% { opacity: 0; transform: translateY(-26px); }
+  55% { opacity: 1; }
+  78% { transform: translateY(1.6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.hero-v {
+  font-size: 48px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--text);
+}
+.hero-s { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+
+/* The one live tile, marked so "today so far" does not read as another
+   measurement of the selected period. */
+.tile-accent { border-color: var(--accent); background: var(--accent-tint); }
+
+/* The one red figure on the dashboard: tokens charged at the full input rate,
+   which no cache read or write covered.
+
+   The surface stays --shade rather than taking a red tint. --muted on --high-bg
+   measures 4.30:1 in light mode, so a tinted card would put the tile's label
+   and sub-line under the AA floor to make the card louder - the number is what
+   has to be red, not the box around it. --high-fg on --shade is 7.06:1 light
+   and 5.85:1 dark, both asserted in tests/styles.test.ts. */
+.tile-alert { border-color: var(--high-fg); }
+.tile-alert .v { color: var(--high-fg); }
+
+/* The right column of the hero row: the live tile, then the badges under it. */
+.hero-side { display: flex; flex-direction: column; gap: 14px; }
+
+/* Figures older than this install intends. Not an error state - the importer
+   may simply be off - so it is warn ink rather than high, and it always sits
+   beside the age itself rather than replacing it. */
+.stale { color: var(--warn-fg); font-weight: 600; }
+
+/* --- habit badges ---------------------------------------------------------
+ *
+ * Chips, not tiles. These read several days at once, so giving them a tile's
+ * weight would set them competing with the cost figure beside them - and the
+ * page is allowed exactly one hero. */
+.badges {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 14px 15px;
+}
+.badges-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.badges ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+/* The metal is the third channel, after the words and the glyph. The three
+   sit at nearly the same luminance on purpose - see the note on MedalIcon -
+   so nothing here may depend on telling them apart by colour. */
+.badge.gold   { background: var(--gold-bg);   border-color: var(--gold-fg);   color: var(--gold-fg); }
+.badge.silver { background: var(--silver-bg); border-color: var(--silver-fg); color: var(--silver-fg); }
+.badge.bronze { background: var(--bronze-bg); border-color: var(--bronze-fg); color: var(--bronze-fg); }
+/* A shape badge, not a rank. Neutral by design: "Consistent" is not the
+   bronze version of "Adaptive", it is a different way of working. */
+.badge.info   { background: var(--busy-bg);   border-color: var(--busy-fg);   color: var(--busy-fg); }
+.badge.plain  { background: var(--shade);     border-color: var(--line);      color: var(--muted); }
+
+.badge-icon { display: inline-flex; flex: 0 0 auto; }
+.badge-icon svg { display: block; }
+.badge-text { display: flex; flex-direction: column; min-width: 0; }
+.badge-label { font-size: 12.5px; font-weight: 650; line-height: 1.25; }
+/* The evidence, set apart by size and weight rather than by colour.
+   --muted here measured 4.46:1 against the badge's own tint in a browser -
+   under AA, and invisible to the author-time contrast test, which checks
+   declared pairs and cannot see one composed by nesting. Inheriting the
+   badge's foreground puts it back on a pair that is measured. */
+.badge-measure { font-size: 11px; color: inherit; font-weight: 400; line-height: 1.3; }
+
+/* Icons are wayfinding, not data: muted, small, and never louder than the
+   value beside them. */
+.k-icon { display: inline-flex; color: var(--muted); margin-right: 6px; vertical-align: -3px; }
+.k-icon svg { display: block; }
+.cell-icon { display: inline-flex; color: var(--muted); vertical-align: -2px; margin-right: 6px; }
+.cell-icon svg { display: block; }
+
+/* Direction, not sentiment.
+   Red and green are out: a green "down" would be this tool telling you what to
+   want. Gold and bronze carry no verdict - they are two ends of a scale of
+   quantity, which is all the arrow measures. Both clear 6.7:1 on --panel and
+   on --shade, the two surfaces a delta ever sits on. They are nearly identical
+   in luminance, so the arrow glyph, not the colour, is what a greyscale reader
+   goes by - which is why the colour is only ever the second channel. */
+.delta { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 600; }
+.delta.rise { color: var(--gold-fg); }
+.delta.fall { color: var(--bronze-fg); }
+.delta-arrow {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin-right: 1px;
+  /* The glyph sits high in its em box; nudging it down aligns it with the
+     digits rather than with their ascenders. */
+  vertical-align: -0.04em;
+}
+/* The base being compared against. Recessive, because the change is the news
+   and the base is the evidence for it. */
+.delta-vs { color: var(--muted); }
+
+.chart { display: flex; flex-direction: column; }
+.chart svg { display: block; touch-action: pan-y; }
+.chart-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 22px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+/* Values lead, labels follow: here the reader has the date and wants the
+   number. */
+.chart-readout strong { color: var(--text); font-size: 14px; font-weight: 650; }
+.chart-hint { color: var(--muted); }
+
+/* The table twin. Collapsed, because the chart is the point when you can see
+   it - but every value stays reachable without a pointer. */
+.chart-table { margin-top: 10px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.chart-table summary {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.chart-table summary:hover { color: var(--text); }
+.chart-table[open] summary { margin-bottom: 8px; }
+.chart-table table { font-size: 12.5px; }
+
+/* --- the model mix ---------------------------------------------------------
+ *
+ * Still the quietest thing in the hero card - no panel of its own, no heading,
+ * nothing bold, everything sized below body text - because it is the same
+ * money taken apart rather than a second measurement, and the page is allowed
+ * exactly one hero.
+ *
+ * What changed is that it is now under the figure instead of across the card
+ * floor, and the bar spans the column. Being quiet is about weight, not about
+ * distance: a 6px strip in the far corner of the card was not reading as
+ * subordinate to the number, it was reading as unrelated to it. */
+.mix { margin-top: 16px; }
+
+/* The figure's underline. 10px rather than 6, and the full width of the
+   column, because it is carrying the eye down from a 48px number - at strip
+   height it read as a progress bar someone had left in the card. */
+.mix-bar {
+  display: flex;
+  /* The gap is the track showing through rather than a border, so two slices
+     separate by edge as well as by hue and every width stays exactly
+     proportional to the share it encodes. */
+  gap: 2px;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--shade);
+}
+/* Widths come from the component, floored there rather than here: see
+   MIN_SEGMENT_PCT. A `min-width` floor in CSS pushes the total past 100% and
+   walks the last segment off the end of the track. */
+.mix-seg { min-width: 0; }
+
+.mix-1 { background: var(--mix-1); }
+.mix-2 { background: var(--mix-2); }
+.mix-3 { background: var(--mix-3); }
+.mix-4 { background: var(--mix-4); }
+
+/* A ledger: mark, name, dollars, share. Four columns rather than the wrapping
+   row of chips this was, because the dollars changed what the rows are for.
+   Chips were right when a row was a name and a percentage and the set was the
+   point; a money column is only readable if it lines up, and it has to line
+   up in order to be checked against the figure above it.
+   Bounded well inside the bar, and left where the number is. The bar spans the
+   column because it is an underline; the rows must not, because a name at one
+   end of that width and its dollars at the other is a ruler, not a row - the
+   eye has to travel the gap to pair them, and at three or four rows that is
+   the whole cost of reading it. */
+.mix-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-width: 19rem;
+  display: grid;
+  gap: 3px 0;
+}
+.mix-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+/* The base of every share on this strip. Text weight, not figure weight - it
+   is evidence for the percentage beside it and for the total above it, and a
+   third bold number in this card would be a second hero. */
+.mix-usd {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+/* Wide enough for "<0.1%" and for "100.0%", so the column does not shift as
+   the period filter changes what is in it. */
+.mix-pct { min-width: 3.4em; }
+/* The glyph is the series mark here, so it takes the slice's colour - the one
+   place in the icon set that does. The `background` the same class sets on a
+   bar segment is harmless on an SVG, which is what lets one class carry the
+   colour to both. */
+.mix-list svg { flex: none; }
+.mix-1 svg { color: var(--mix-1); }
+.mix-2 svg { color: var(--mix-2); }
+.mix-3 svg { color: var(--mix-3); }
+.mix-4 svg { color: var(--mix-4); }
+.mix-list li.mix-1, .mix-list li.mix-2,
+.mix-list li.mix-3, .mix-list li.mix-4 { background: none; }
+/* A model with no published rate. Muted mark, em dash where the share goes:
+   it draws no segment, and a coloured mark would promise one in the bar. */
+.mix-off svg { color: var(--muted); }
+
+/* Truncates rather than wraps. A model id is long, the column beside it is
+   money, and one wrapped name would break the alignment the ledger exists
+   for. The full id is in the row's title either way. */
+.mix-name {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mix-pct { font-variant-numeric: tabular-nums; text-align: right; }
+.mix-foot { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .hero-row { grid-template-columns: minmax(0, 1fr); }
+  /* Nothing to bound against once the card is the full width of a phone, and
+     the rows are the only thing in the column. */
+  .mix-list { max-width: none; }
+  /* Side by side once they are no longer a narrow right-hand column. */
+  .badges ul { flex-direction: row; flex-wrap: wrap; }
+  .badge { flex: 1 1 160px; }
+  .hero-v { font-size: 38px; }
+  /* Once the coins are under the figure rather than beside it, right-aligning
+     them leaves them orphaned from the number they belong to. */
+  .coins svg { margin-left: 0; }
+  .coins figcaption { text-align: left; }
+}
+
+/* --- trace tree ---------------------------------------------------------
+   One session as nested <details>. Depth is a custom property rather than a
+   rule per level, so the stylesheet does not grow when a run nests deeper.
+   Colours are existing tokens only: tests/styles.test.ts asserts every var()
+   resolves, and the UI checks measure contrast in a real browser. */
+
+/* Declared so the sheet never reads an undefined property: every row sets its
+   own --depth inline, and a node rendered outside the tree still lands at 0. */
+.trace { --depth: 0; }
+
+.trace {
+  max-height: 640px;
+  overflow: auto;
+  font-size: 13px;
+}
+
+.tr {
+  border-left: 2px solid var(--line-soft);
+  margin-left: calc(var(--depth) * 14px);
+}
+
+.tr > summary {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+/* The default triangle sits outside the flex row and misaligns the columns. */
+.tr > summary::-webkit-details-marker { display: none; }
+.tr > summary::marker { content: ""; }
+
+.tr > summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 11px;
+  width: 10px;
+  flex: none;
+}
+.tr[open] > summary::before { content: "▾"; }
+
+.tr > summary:hover { background: var(--shade); }
+.tr > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.tr-kind {
+  flex: none;
+  width: 74px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.tr-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.tr-ms {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Which source measured it. A span and a hook time different windows, so the
+   number never appears without saying which one took it. */
+.tr-src {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--shade);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tr-body { padding: 2px 8px 8px 26px; }
+
+.tr-body pre {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: var(--shade);
+  border-radius: var(--radius);
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tr-facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; }
+.tr-facts > div { display: flex; gap: 6px; align-items: baseline; }
+.tr-facts dt { color: var(--muted); font-size: 11px; }
+.tr-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+/* A prompt is where a turn starts, so it reads as a heading in the stack. */
+.tr-prompt > summary .tr-label { font-weight: 600; }
+.tr-subagent > summary .tr-label { color: var(--accent); }
+
+@media (max-width: 640px) {
+  /* Tool arguments are the longest strings in this app, and a phone is where
+     they would push the page sideways. Indent less and let the body wrap. */
+  .tr { margin-left: calc(var(--depth) * 7px); }
+  .tr-kind { width: 56px; }
+}
+
+/*
+ * The loading shell. One line, muted, in the same place the page's first
+ * heading would be, so arriving does not shift the layout.
+ */
+.page-loading {
+  padding: 28px 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* --- trace: the path strip ------------------------------------------------
+   The run as one line of steps, under the tree that holds all of it.
+
+   The card follows the pointer and is positioned against the viewport, so
+   there is no reserved space here to make room for it and nothing on the page
+   moves when one opens. What that costs is that the card's placement is
+   arithmetic in the component rather than a rule here - only the component
+   knows where the cursor is - and the component flips it near the right or
+   bottom edge so it can never overhang, which `noHorizontalScroll` is in
+   every baseline assertion to catch. */
+
+.tp { margin: 0 0 18px; }
+
+.tp-cap { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.tp-cap b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.tp-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px 0;
+}
+
+.tp-step { display: flex; align-items: center; }
+
+/* The join between two steps. Decorative: the order is carried by the list
+   itself, which is what a screen reader reads. */
+.tp-step + .tp-step::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 1px;
+  background: var(--line);
+  margin: 0 1px;
+}
+
+.tp-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  /* A <button> inherits neither font nor colour, and a chip wearing the
+     browser's default ink at its default size is not in this palette. */
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  max-width: 170px;
+}
+
+.tp-glyph { flex: none; display: flex; color: var(--muted); }
+.tp-glyph svg { width: 15px; height: 15px; }
+
+.tp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The count is never hidden in the card: how many times a step ran is half of
+   what the step is, and a fact only reachable by hovering is a fact a phone
+   does not have. */
+.tp-times {
+  margin-left: 5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tp-node:hover { background: var(--shade); }
+.tp-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The one whose card is showing, marked in its own kind colour rather than the
+   accent - an accent ring here would read as "this step is a different kind". */
+.tp-node.on { background: var(--shade); box-shadow: inset 0 0 0 1px var(--step); }
+
+/*
+ * One colour per kind, so the run has a shape before it has any words.
+ *
+ * `--step` is set once per kind and everything below reads it, which is what
+ * keeps this five declarations rather than five rule blocks.
+ *
+ * The colour lands on the glyph and the chip's edge - the marks - and never on
+ * the label, which stays in `--text`. That is the rule the model mix already
+ * follows: a coloured mark carries identity and the text beside it stays ink,
+ * because a page where the words are tinted is a page where nothing is
+ * emphasised.
+ */
+/* Declared first so the sheet never reads an undefined property - the same
+   reason `.trace` declares its own `--depth`. The remainder chip is not a kind
+   and has no colour of its own; without this it fell back to `currentColor`,
+   which happened to be right and was right by accident. */
+.tp-step     { --step: var(--line); --n: 0; }
+.tp-user     { --step: var(--step-user); }
+.tp-tool     { --step: var(--step-tool); }
+.tp-mcp      { --step: var(--step-mcp); }
+.tp-skill    { --step: var(--step-skill); }
+.tp-subagent { --step: var(--step-subagent); }
+
+.tp-step .tp-glyph { color: var(--step); }
+.tp-step .tp-node { border-color: var(--step); }
+/* A prompt is a turn boundary, which is the rhythm of the run: it is the one
+   chip that reads as a heading in the row. */
+.tp-user .tp-node { font-weight: 600; }
+
+/* Not a control: nothing opens, so it must not look like the chips that do. */
+.tp-more {
+  cursor: default;
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
+}
+.tp-more:hover { background: transparent; }
+
+/* The legend. Only the kinds this run reached, in the order it reached them. */
+.tp-legend {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.tp-legend li { display: flex; align-items: center; gap: 6px; }
+.tp-legend .tp-glyph { color: var(--step); }
+
+/*
+ * The card, at the pointer.
+ *
+ * `fixed` and placed from `left`/`top` by the component, which is the only
+ * thing that knows where the cursor is. `pointer-events: none` so it can never
+ * come between the cursor and the chip under it: it is something to read, not
+ * something to reach.
+ *
+ * The width and max-height here are the two numbers `CARD` in the component
+ * mirrors, so it can flip the card near an edge without rendering it in the
+ * wrong place first to measure it. Change one and change the other.
+ */
+.tp-card {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 320px;
+  max-height: 190px;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.22);
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.tp-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tp-card-head b { font-size: 13px; color: var(--text); word-break: break-word; }
+.tp-card-head em { font-style: normal; color: var(--muted); }
+.tp-card-n {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--shade);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The duration and, always, which source took it - or why there is none. */
+.tp-card-ms { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tp-card-ms i { font-style: normal; color: var(--muted); }
+
+.tp-card-facts { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.tp-card-facts > span { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.tp-card-facts b { color: var(--muted); font-size: 11px; font-weight: 500; }
+.tp-card-facts i { font-style: normal; color: var(--text); word-break: break-word; }
+
+/* What was sent, verbatim and clamped. The tree below carries all of it. */
+.tp-card-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--shade);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  /* A 320px card on a 375px screen has no margin to flip into - and there is
+     no pointer here to follow anyway, so every card on a phone is a tap and
+     every tap anchors to its chip. */
+  .tp-card { width: min(320px, calc(100vw - 24px)); }
+  .tp-node { max-width: 132px; }
+}
+
+/* --- the Setup fascia ------------------------------------------------------
+ *
+ * Setup used to be five sections of prose and a four-column table, and it read
+ * as documentation about the tool rather than as a reading of it. It is one
+ * plate now, with four engraved bays on it. Each figure is an instrument: a
+ * dial where the question is "is that a lot", a counter window where the
+ * question is "how many", a lamp where the question is "is it on".
+ *
+ * The rule every instrument keeps is the project's own. A dial states a band
+ * and the exact figure is printed under it - a pointer with no number beneath
+ * is a grade, and this tool does not give those. See src/domain/console.ts for
+ * the three numbers each band is read off; the plate prints them too.
+ */
+
+.console {
+  background: var(--fascia);
+  border: 1px solid var(--fascia-edge);
+  border-radius: 10px;
+  /* One bevel, drawn once. A raised plate has a lit top edge and a shadowed
+     bottom one; anything more and it becomes a skeuomorph. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 var(--fascia-edge),
+    0 1px 2px rgba(0, 0, 0, 0.16);
+  padding: 18px 20px 22px;
+  margin-bottom: 22px;
+}
+
+/* Silkscreen. Caps and tracking here are the subject's own vernacular - a
+   control panel legend - and are used on legends and nowhere else. */
+.engraved {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 650;
+  font-size: 11px;
+  color: var(--engrave);
+}
+
+.bay { border-top: 1px solid var(--fascia-edge); padding: 18px 0 4px; }
+.bay:first-of-type { border-top: 0; padding-top: 0; }
+
+.bay-head { margin-bottom: 14px; }
+.bay-legend { font-size: 11.5px; margin: 0 0 6px; }
+.bay-note {
+  margin: 0;
+  max-width: 66ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--engrave-dim);
+}
+
+/* The dials on the left, what they were read off on the right. A legend plate
+   beside the instruments, which is where a panel puts one. */
+.bay-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px 46px;
+}
+.bay-foot {
+  flex: 1 1 260px;
+  display: grid;
+  gap: 12px;
+  padding-top: 6px;
+}
+.bay-status {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--engrave-dim);
+}
+
+/* The thresholds the dials were read off, beside the dials. */
+.dial-rule { display: grid; gap: 3px; }
+.dial-rule-line { font-size: 11.5px; color: var(--engrave-dim); }
+.dial-rule-line .engraved { font-size: 11px; margin-right: 6px; }
+
+/* --- dials ---------------------------------------------------------------- */
+
+.knobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 34px;
+}
+
+.knob-unit { width: 142px; text-align: center; }
+
+.knob {
+  position: relative;
+  width: 142px;
+  height: 116px;
+  /* Set per dial by the page. Declared here so the fallback is a pointer
+     straight up rather than nothing at all, and so the stylesheet's own tests
+     can see the two names exist. */
+  --angle: 0deg;
+  --step: 0;
+}
+
+/* The travel arc: 270 degrees with the dead zone at the bottom, which is where
+   a rotary control puts it. The gap is what says which way is up on a knob
+   that has no stop. */
+.knob-dial { position: absolute; inset: 0; }
+.knob-dial::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 104px;
+  height: 104px;
+  margin-left: -52px;
+  border-radius: 50%;
+  background: conic-gradient(from 225deg, var(--engrave-dim) 0 270deg, transparent 270deg);
+  opacity: 0.45;
+  /* `closest-side` so the stops are percentages of the box's own radius. The
+     default, farthest-corner, puts the ring at 1.41x that - which lands it
+     under the cap, where an arc is a thing nobody can see. */
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 78%, #000 78% 85%, transparent 85%);
+  mask: radial-gradient(circle closest-side, transparent 0 78%, #000 78% 85%, transparent 85%);
+}
+
+.detent {
+  position: absolute;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--engrave-dim);
+}
+.detent.on { color: var(--engrave); font-weight: 700; }
+.detent-none { left: 0; bottom: 6px; }
+.detent-low { left: 0; top: 10px; }
+.detent-medium { right: 0; top: 10px; }
+.detent-high { right: 0; bottom: 6px; }
+
+.knob-cap {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  width: 68px;
+  height: 68px;
+  margin-left: -34px;
+  border-radius: 50%;
+  /* Knurling: the skirt is milled, the cap is not. Two layers, one element. */
+  background:
+    repeating-conic-gradient(from 0deg, var(--knob-rim) 0 2.6deg, var(--knob-face) 2.6deg 7.2deg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.42);
+  transform: rotate(var(--angle));
+}
+.knob-cap::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  /* Lighting, not colour: an alpha wash over the knob's own face, so the
+     pointer's measured contrast against --knob-face still holds under it. */
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.16), transparent 62%),
+    var(--knob-face);
+}
+
+.knob-index {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 3px;
+  height: 20px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--pointer);
+}
+/* No pointer at all when nothing was measured. A knob resting on NONE would be
+   the panel showing a reading it never took, which is the bug this project
+   exists to avoid, drawn instead of written. */
+.knob-dead .knob-index { display: none; }
+.knob-dead .knob-cap { opacity: 0.55; }
+
+.knob-label { display: block; margin-top: 8px; }
+.knob-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--engrave-dim);
+}
+
+/* --- readouts ------------------------------------------------------------- */
+
+.readout {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 3px;
+  background: var(--term-bg);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+  font: 15px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--term-key);
+}
+.readout-wide { min-width: 108px; }
+.readout .dash { color: var(--term-dim); }
+
+/* --- the counter bank ------------------------------------------------------
+ *
+ * Row counts get the panel's other instrument. A seven-figure number means
+ * nothing banded - "high" tells a reader less than 3,405,221 does - and the
+ * cells are what make one countable at a glance.
+ */
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 14px 16px;
+}
+
+.counter-window {
+  display: flex;
+  background: var(--term-bg);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+  padding: 4px 4px;
+  overflow: hidden;
+  justify-content: flex-end;
+}
+.digit {
+  flex: 0 0 15px;
+  text-align: center;
+  padding: 1px 0;
+  border-right: 1px solid var(--term-line);
+  font: 14px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--term-key);
+}
+.digit:last-child { border-right: 0; }
+.digit.sep { flex: 0 0 7px; color: var(--term-dim); border-right: 0; }
+.digit:first-child { border-left: 1px solid var(--term-line); }
+
+.counter-label { display: block; margin-top: 6px; }
+
+/* --- the annunciator strip -------------------------------------------------
+ *
+ * Lit or unlit is the state, and the word beside it says the same thing, so
+ * the colour is never the only channel. The reason a lamp is dark is written
+ * under it rather than hung in a tooltip: off is the normal state for most of
+ * these, and a phone has no tooltip.
+ */
+
+.lamps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  gap: 14px 22px;
+}
+
+.lamp { display: flex; gap: 10px; }
+.lamp-bulb {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--knob-rim);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+.lamp-live .lamp-bulb {
+  background: var(--ok-fg);
+  box-shadow: 0 0 0 3px var(--ok-bg);
+}
+
+.lamp-body { min-width: 0; }
+.lamp-label { display: block; }
+.lamp-state {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--engrave-dim);
+}
+.lamp-live .lamp-state { color: var(--ok-fg); }
+
+.lamp-detail {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--engrave-dim);
+  overflow-wrap: anywhere;
+}
+.lamp-fix { margin-top: 5px; font-size: 11.5px; color: var(--engrave-dim); }
+.lamp-fix code { font-size: 11px; }
+
+/* --- appearance ------------------------------------------------------------
+ *
+ * The one control on the plate, so it is drawn as one: three selector keys in
+ * a recessed track, the chosen key raised and lit. The buttons and their
+ * classes are unchanged - the UI checks click .picker-row .swatch:last-of-type
+ * and expect dark.
+ */
+
+.console .picker { display: grid; gap: 10px; }
+.console .picker-row {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 6px;
+  background: var(--recess);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28);
+  width: fit-content;
+  margin-bottom: 0;
+}
+.console .swatch {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 7px 18px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--engrave-dim);
+  cursor: pointer;
+}
+.console .swatch:not(.on):hover { background: rgba(127, 143, 158, 0.18); color: var(--engrave); }
+.console .swatch.on {
+  background: var(--fascia);
+  color: var(--engrave);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
+}
+.console .picker-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--engrave-dim);
+}
+
+.console .dash { color: var(--engrave-dim); }
+.console code {
+  background: var(--recess);
+  border-color: var(--fascia-edge);
+  color: inherit;
+}
+
+/* --- the print sheet -------------------------------------------------------
+ *
+ * The paths are the one thing on this page that is neither a reading nor a
+ * control. They are a parts list, so they are the card slipped into the back
+ * of the machine, and drawn as paper so nobody mistakes them for something the
+ * panel measured.
+ */
+
+.sheet {
+  background: var(--sheet);
+  color: var(--sheet-ink);
+  border: 1px solid var(--sheet-rule);
+  border-radius: 3px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+}
+
+.sheet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--sheet-rule);
+}
+.sheet-title {
+  margin: 0;
+  font: 650 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.sheet-note {
+  margin-left: auto;
+  font: 11.5px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--sheet-ink);
+  opacity: 0.72;
+}
+
+.sheet-rows { margin: 0; display: grid; gap: 7px; }
+.sheet-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sheet-what {
+  font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+/* Decoration, and the only decoration here. The row reads identically without
+   it, which is the test for whether a mark carries information. */
+.sheet-lead {
+  flex: 1 1 40px;
+  min-width: 24px;
+  border-bottom: 1px dotted var(--sheet-rule);
+  transform: translateY(-3px);
+}
+.sheet-where {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.sheet-where code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: inherit;
+}
+.sheet-where .dash { color: var(--sheet-ink); opacity: 0.7; }
+
+/*
+ * Power-up.
+ *
+ * The one thing on this page that moves, and it moves once: the pointers leave
+ * the dead zone and swing to their reading, staggered across the bank. The
+ * figures are painted from the first frame, so a reader who asked for
+ * stillness loses the sweep and never a number. Kept under 350ms end to end,
+ * which is inside the settle the UI checks wait before they screenshot.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes knob-sweep { from { transform: rotate(-135deg); } }
+
+  .knob:not(.knob-dead) .knob-cap {
+    animation: knob-sweep 260ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+    animation-delay: calc(var(--step) * 45ms);
+  }
+}
+
+@media (max-width: 760px) {
+  .console { padding: 16px 14px 18px; }
+  .knobs { gap: 6px 18px; justify-content: space-between; }
+  .counters { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .lamps { grid-template-columns: 1fr; }
+  .sheet { padding: 16px 14px 18px; }
+  /* A long absolute path cannot share a line with its label on a phone, and a
+     leader dot between two stacked things joins nothing. */
+  .sheet-row { display: grid; gap: 0; }
+  .sheet-lead { display: none; }
+  .sheet-where { text-align: left; }
+}
+
+/* --- the terminal printing itself in --------------------------------------
+   The tree's rows arrive the way a terminal fills: one line at a time, top to
+   bottom. The stagger is a `--i` per root written by the component and an
+   `animation-delay` here, so it costs no JavaScript at all - the only script
+   involved is the one class that lets a reader cut it short.
+
+   Only the roots animate. Every row starts shut now, so the roots are the only
+   lines on screen and a delay on a row inside a closed <details> would be
+   spent on nothing.
+
+   The resting state is the finished state: a row is opaque and in place with
+   no animation applied, which is what a reader who asked for stillness gets,
+   and what the UI probe measures. */
+
+.decoding {
+  color: var(--decode);
+  /* The blocks are wider than the digits they stand in for in a proportional
+     face, so the figure would shrink as it resolved. */
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * One line, printed.
+   *
+   * `steps(1)` on the opacity is what makes it a print rather than a fade: the
+   * row is absent and then it is there, the way a terminal writes a line, with
+   * no in-between state where it is half-visible. The slide is small and
+   * horizontal because that is the direction text arrives from.
+   */
+  /*
+   * The direct children of the tree, and nothing deeper.
+   *
+   * It was `.term-panel:not(.printed) .tr` for a moment, which is every row in
+   * the run - 500 of them on a long one, all but a couple of dozen inside a
+   * shut <details>. Those cannot animate, so `backwards` left each one holding
+   * the keyframe's opacity of 0, and every prompt a reader opened afterwards
+   * unfolded onto rows that had to animate themselves out of invisibility
+   * first. The roots are the only lines on screen and the only ones that
+   * should be printing.
+   */
+  .term-panel:not(.printed) > .trace > .tr {
+    animation: tr-print 220ms ease-out backwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+
+  /*
+   * There is no caret, and there was one for about ten minutes.
+   *
+   * A blinking block at the end of the output is the obvious way to make this
+   * read as a terminal, and it cannot be made honest here: only opacity is
+   * animated, so every row occupies its space from the first frame and the
+   * caret sits at the bottom of the finished tree while the print head is
+   * three hundred pixels above it. Following the print head would mean rows
+   * that take up no room until they arrive, which is a reflow per line on a
+   * five-hundred-row panel.
+   *
+   * A cursor that is not where the writing is happening is a worse lie than no
+   * cursor, so the rows print and nothing marks the place.
+   */
+}
+
+/*
+ * The run list prints itself in, the way the tree does.
+ *
+ * Same keyframes, same `--i`, deliberately: the list and the run it opens are
+ * one page, and two different arrivals on it would read as two mechanisms.
+ *
+ * The stagger is capped. A project with four hundred recorded runs would
+ * otherwise take twelve seconds to finish arriving, and a reader scrolling to
+ * the bottom of it would be watching an empty column - so past the first
+ * screenful every remaining row lands together.
+ *
+ * No `.printed` escape hatch here, and none needed. The rows are keyed on the
+ * session id, so sorting, filtering and choosing a run reorder existing nodes
+ * rather than making new ones, and a CSS animation fires when its element is
+ * created. This plays once, on arrival, and never again while the list stands.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .runs-scroll > ul > li {
+    animation: tr-print 220ms ease-out backwards;
+    animation-delay: calc(min(var(--i, 0), 22) * 34ms);
+  }
+}
+
+@keyframes tr-print {
+  from { opacity: 0; transform: translateX(-6px); }
+  /* Opaque well before the slide finishes, so a row is readable for most of
+     its own arrival rather than only at the end of it. */
+  40%  { opacity: 1; }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- the path strip: expanding, and the window a chip opens ----------------- */
+
+/* Two export links where there was one. They wrap on a narrow laptop rather
+   than squeezing the section heading, which is why this is a flex row and not
+   two floated anchors. */
+.trace-exports { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* The way back from an expanded strip, under the legend it pushed down. */
+.tp-fewer { margin: 10px 0 0; }
+
+/*
+ * The window a chip opens.
+ *
+ * Centred by the browser, because a window placed at its own chip would open
+ * off the bottom of the screen for any chip in the last row of the strip. Only
+ * the growth appears to come from the chip: the component measures the chip and
+ * the dialog and points `transform-origin` at the difference.
+ */
+.tp-window {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(72vh, 620px);
+  overflow: auto;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 0.3);
+}
+.tp-window::backdrop { background: rgb(0 0 0 / 0.45); }
+
+.tp-window-head { display: flex; align-items: center; gap: 9px; margin: 0 0 4px; flex-wrap: wrap; }
+.tp-window-head b { font-size: 17px; letter-spacing: -0.01em; word-break: break-word; }
+.tp-window-head em { font-style: normal; color: var(--muted); font-size: 13px; }
+/* The glyph wears its kind's colour here too, so the window and the chip that
+   opened it are visibly the same object. */
+.tp-window-head .tp-glyph { color: var(--step); }
+.tp-window-head .tp-glyph svg { width: 18px; height: 18px; }
+
+.tp-window-where { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+
+.tp-window-ms {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: var(--radius);
+  background: var(--shade);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.tp-window-ms i { font-style: normal; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+.tp-window-facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 12px; }
+.tp-window-facts > div { display: flex; gap: 7px; align-items: baseline; min-width: 0; }
+.tp-window-facts dt { color: var(--muted); font-size: 11.5px; }
+.tp-window-facts dd { margin: 0; word-break: break-word; }
+
+.tp-window-label { margin: 0 0 5px; font-size: 11.5px; color: var(--muted); }
+.tp-window pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--shade);
+  border-radius: var(--radius);
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+}
+
+.tp-window-shut { margin: 14px 0 0; display: flex; justify-content: flex-end; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * The window growing out of its chip. `transform-origin` is set by the
+   * component from a measurement, so this only has to say how far and how
+   * fast; the backdrop fades on its own so the page does not appear to jump.
+   */
+  .tp-window[open] { animation: tp-grow 190ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+  .tp-window[open]::backdrop { animation: tp-veil 190ms ease-out; }
+
+  /*
+   * A step attaching to the strip.
+   *
+   * Only the chips that arrived with the last `+N more` carry `tp-new`, so an
+   * expansion reads as new steps joining a list rather than the whole strip
+   * redrawing. `--n` is the chip's place among those, which is what makes them
+   * land one after another instead of all at once.
+   */
+  .tp-new {
+    animation: tp-attach 260ms ease-out backwards;
+    animation-delay: calc(var(--n, 0) * 40ms);
+  }
+}
+
+@keyframes tp-grow {
+  from { transform: scale(0.16); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: none; opacity: 1; }
+}
+
+@keyframes tp-veil {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes tp-attach {
+  /* From slightly small and to the left: the chip arrives from the end of the
+     row it is joining rather than dropping onto it. */
+  from { opacity: 0; transform: translateX(-10px) scale(0.86); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- the tap on the trace line ---------------------------------------------
+ *
+ * The terminus of the observability pipe, opened. It is drawn as a terminal
+ * because the thing on the other end of that pipe is a stream of records, and
+ * because this app already committed to that material for the Trace page's
+ * tree: the five --term-* tokens and nothing new. A second dark surface with
+ * its own palette would be a second material bought for one window.
+ *
+ * The vessel is a <button> now rather than a <b>. Everything about how it
+ * draws is in `.rp-end` and stays there; these three lines undo what a browser
+ * does to a button and nothing else, so the word, the fill and the tag under
+ * it are the same object they were.
+ */
+button.rp-end {
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+/* The same affordance a requirement vessel has, for the same reason: this is
+   the one circle in the row that opens something, and hover is where a pointer
+   asks whether it does. */
+button.rp-end:hover { border-color: var(--accent-strong); }
+
+.mon {
+  width: min(760px, 92vw);
+  max-height: 88vh;
+  margin: auto;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--term-line);
+  border-radius: var(--radius);
+  overflow: auto;
+  background-color: var(--term-bg);
+  /* Scanlines. Static - a moving one is a strobe over text somebody is trying
+     to read, and the point of the surface is that it looks like a screen, not
+     that it flickers. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.035) 0 1px,
+    transparent 1px 3px
+  );
+  color: var(--term-fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-shadow: 0 18px 60px rgb(0 0 0 / 0.45);
+}
+.mon::backdrop { background: rgb(0 0 0 / 0.55); }
+
+/* The title bar: what this is, and whether the line is open. */
+.mon-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--term-line);
+  font-size: 12px;
+}
+.mon-bar b { color: var(--term-key); font-weight: 700; letter-spacing: 0.02em; }
+.mon-where { color: var(--term-dim); }
+.mon-state { color: var(--term-dim); letter-spacing: 0.08em; margin-left: auto; }
+
+/* Lit or unlit, with the word beside it. The lamp is never the only channel. */
+.mon-led {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--term-dim);
+  opacity: 0.45;
+}
+.mon-led.on { background: var(--term-key); opacity: 1; box-shadow: 0 0 8px var(--term-key); }
+
+.mon-cmd { margin: 0 0 12px; font-size: 12px; color: var(--term-dim); }
+.mon-prompt { color: var(--term-key); }
+/* A block caret, on the line the prompt is on. Decoration over a line that is
+   already complete without it. */
+.mon-caret {
+  display: inline-block;
+  width: 7px;
+  height: 12px;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--term-key);
+}
+
+/* The counters. Every one of them is a measurement and every zero is an
+   answer, which is why they are figures and not dashes. */
+.mon-tally {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px 14px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--term-line);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 0.03);
+}
+.mon-tally dt {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--term-dim);
+}
+.mon-tally dd {
+  margin: 3px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--term-key);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.mon-label { margin: 0 0 6px; font-size: 11px; color: var(--term-dim); letter-spacing: 0.04em; }
+
+/*
+ * The records. Each row is one line and stays one line - a log whose rows wrap
+ * is a log nobody can scan - so the box scrolls sideways rather than the page,
+ * which is the rule every wide thing in this app is held to.
+ */
+.mon-out {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 46vh;
+  overflow: auto;
+  font-size: 11.5px;
+  line-height: 1.85;
+}
+.mon-out .term-ts { color: var(--term-dim); }
+.mon-sid { flex: none; color: var(--term-dim); opacity: 0.75; }
+.mon-out .term-name { color: var(--term-key); }
+/* Free to run past the edge of the box: `.term-attrs` clips with an ellipsis
+   where it is used on a page, and here the row is allowed to be as long as it
+   is and the box scrolls to it. */
+.mon-out .term-attrs { color: var(--term-dim); overflow: visible; }
+.mon-out .term-attrs b { color: var(--term-fg); font-weight: 400; }
+.mon-out .term-attrs i { font-style: normal; color: var(--term-dim); opacity: 0.8; }
+.mon .dash { color: var(--term-dim); }
+
+/* Both empty states say which source would answer, which is the house rule for
+   an absence: a dark window that only says it is dark is a dead end. */
+.mon-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--term-dim);
+}
+.mon-empty code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.08);
+  color: var(--term-fg);
+  font-size: 11px;
+}
+
+.mon-dark { display: grid; gap: 12px; }
+/*
+ * The sign. Block capitals built out of `#`, which the component rewrites a
+ * few characters of every ninetieth of a second - a fault on the line, drawn
+ * as a fault. The resting frame is the clean sign, so a reader who asked for
+ * stillness reads words rather than watching nothing.
+ */
+.mon-sign {
+  margin: 0;
+  padding: 12px 4px;
+  overflow-x: auto;
+  color: var(--term-key);
+  /*
+   * Measured in a browser rather than chosen. A block letter is a 5x5 grid of
+   * character cells, and a monospace cell is about 0.6em wide by a whole em
+   * tall - so the row spacing is what decides whether the letters read as
+   * letters or as five loose rows of hashes. At 1.15 they were sparse and at
+   * 0.8 the rows overlapped into a smear; 1 with no letter-spacing is the
+   * densest the grid goes while every row still clears the one above it.
+   *
+   * 13px keeps the widest word (41 columns, about 320px) inside the window on
+   * a phone, and it is above the 11px floor the whole app is held to.
+   */
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 12px rgb(0 0 0 / 0.4);
+}
+
+.mon-shut { margin: 14px 0 0; display: flex; justify-content: flex-end; }
+/* The one control in here wears the surface it sits on. A light button on a
+   terminal reads as part of the page behind the dialog rather than part of
+   the dialog. */
+.mon .btn {
+  border-color: var(--term-line);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--term-fg);
+}
+.mon .btn:hover { border-color: var(--term-key); color: var(--term-key); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Out of the middle, which is where it comes from: there is one terminus at
+     the end of a diagram the reader is already looking at, so unlike the path
+     strip's window there is nothing here to disambiguate by growing from. */
+  .mon[open] { animation: mon-open 200ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+  .mon[open]::backdrop { animation: mon-veil 200ms ease-out; }
+  .mon-caret { animation: mon-blink 1.1s step-end infinite; }
+  /* The same pulse the live dot uses, because it means the same thing. */
+  .mon-led.on { animation: pulse 2s ease-in-out infinite; }
+}
+
+@keyframes mon-open {
+  from { transform: scale(0.9); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: none; opacity: 1; }
+}
+
+@keyframes mon-veil {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes mon-blink {
+  0%, 45%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}

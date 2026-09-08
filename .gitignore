@@ -1,0 +1,15 @@
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+.env.local
+data/*.db
+data/*.db-*
+data/spool.jsonl
+candidates/*
+!candidates/.gitkeep
+
+data/ui-tests/
+data/observability/
+.env
+.claude/settings.local.json

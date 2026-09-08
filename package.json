@@ -1,0 +1,37 @@
+{
+  "name": "dev-ai-usage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "run": "vite-node -c vitest.config.mts bin/run.ts",
+    "ingest": "vite-node -c vitest.config.mts bin/ingest.ts",
+    "archive": "vite-node -c vitest.config.mts bin/archive.ts",
+    "report": "vite-node -c vitest.config.mts bin/report.ts",
+    "doctor": "vite-node -c vitest.config.mts bin/doctor.ts",
+    "ui-test": "vite-node -c vitest.config.mts bin/ui-test.ts",
+    "migrate": "vite-node -c vitest.config.mts bin/migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "playwright-core": "^1.62.1",
+    "typescript": "^5",
+    "vite-node": "^6",
+    "vitest": "^4.1.11",
+    "wait-on": "^9.1.0"
+  }
+}
