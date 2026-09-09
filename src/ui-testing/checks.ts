@@ -431,6 +431,24 @@ export function populatedChecks(): UiCheck[] {
     },
     {
       /*
+       * Same shape as the collapse check, and for the same reason: the OTEL
+       * filter is a stored choice, so a check that only turned it on would
+       * leave every later run of this suite filtering the reader's own
+       * database. The second click proves the way back exists.
+       */
+      name: "Runs can be filtered to OTEL spans and back",
+      path: "/observability/trace",
+      viewport: LAPTOP,
+      theme: "light",
+      steps: [{ click: ".otel-toggle button", times: 2, settle: 1_500 }],
+      assertions: [
+        ...BASELINE,
+        { kind: "visible", selector: ".runs .run", why: "Turning the filter back off has to bring every run back, not just the OTEL ones - otherwise the control is a one-way door and the reader loses the list for the rest of the visit." },
+        { kind: "text", contains: "in this project", why: "The denominator has to read as the whole project again once the filter is off, the same rule the date filter is held to." },
+      ],
+    },
+    {
+      /*
        * A preset, then All time. Same shape as the collapse check and for the
        * same reason: filtering writes a stored choice against the reader's own
        * database, so the check has to put it back. The second click also
@@ -600,6 +618,7 @@ export function populatedChecks(): UiCheck[] {
         { kind: "visible", selector: ".run-cell .marks-tools", why: "A run's tool count is the other half of how big it was. Cost alone cannot tell a long cheap run from a short expensive one." },
         { kind: "visible", selector: ".run-cell .run-fig", why: "The marks are a band and the figure is the measurement. A column of glyphs with no numbers beside them is a verdict with no evidence, which is the one thing this project will not ship." },
         { kind: "visible", selector: ".runs-toggle button[aria-expanded]", why: "The run list is the taller half of the page on a project with hundreds of runs. Collapsing it is how the tree gets the screen, and the control has to say which state it is in." },
+        { kind: "visible", selector: ".otel-toggle button[aria-pressed]", why: "The list otherwise mixes runs OTEL never touched with ones it did, and a reader trying to judge OTEL coverage has no way to see just the second kind - the control has to say whether that filter is on." },
         { kind: "absentSelector", selector: ".trace-controls .segmented", why: "The time window sat above the run list and scoped a chart, not the list - so it looked like it narrowed the runs and did not. It belongs in the Ended column with the dates it filters, and having both would be two controls for one job." },
         { kind: "visible", selector: ".term-panel", why: "The tree is raw machine output and reads as a terminal. Losing the surface would leave monospace text on a page-coloured panel, which is neither." },
         { kind: "absentSelector", selector: ".runchart", why: "The bar-per-run chart was a second index of the same runs the list already holds, and the list gained the cost of each one as a column - so the chart was two ways to spot an expensive run, and the reader had to check they agreed." },

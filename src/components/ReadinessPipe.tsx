@@ -14,7 +14,7 @@ import {
   type SettingsScan,
   type TierSummary,
 } from "../domain/instrumentation";
-import type { TraceTap } from "../domain/traceTap";
+import { waterFill, type TraceTap } from "../domain/traceTap";
 import { MaturitySeal } from "./MaturitySeal";
 import { RequirementScroll, anchorFor } from "./RequirementScroll";
 import { TraceMonitor } from "./TraceMonitor";
@@ -337,10 +337,20 @@ function Stop({
   const receipt = receiptFor(cell, live);
   const snippet = settingSnippet(cell, scan);
 
+  /*
+   * Volume, not just verdict - but only once the verdict is "met". A
+   * misconfigured or unset node keeps its fixed dregs (see `.rp-node.wrong`/
+   * `.rp-node` in globals.css): a wrong setting reading as brimming because
+   * data happened to arrive before it broke would be the fill lying about
+   * the one thing the colour and the tag are there to say plainly.
+   */
+  const fill = cell.state === "met" && receipt ? waterFill(receipt.count) : null;
+
   return (
     <span className={`rp-stop rp-anchor-${edge}`}>
       <a
         className={`rp-node ${cell.state}`}
+        style={fill === null ? undefined : ({ "--fill": `${fill}%` } as CSSProperties)}
         href={`#${anchorFor(cell)}`}
         aria-label={describe(cell, receipt)}
       >

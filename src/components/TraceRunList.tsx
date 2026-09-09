@@ -1,8 +1,9 @@
-import { selectSession, setRunsOpen, sortRuns } from "../app/trace-actions";
+import { selectSession, setOtelOnly, setRunsOpen, sortRuns } from "../app/trace-actions";
 import type { TraceableSession } from "../db/QueryRepository";
 import { bandOf, type RunBands } from "../domain/runBands";
 import { ariaSort, type RunColumn, type RunOrder } from "../domain/runOrder";
 import { describeRange, isFiltered, type DateRange } from "../domain/traceDates";
+import { localDateMinute } from "../domain/localClock";
 import { BandMarks } from "./BandMarks";
 import { BandSettings } from "./BandSettings";
 import { DateFilter } from "./DateFilter";
@@ -45,6 +46,7 @@ export function TraceRunList({
   open,
   range,
   total,
+  otelOnly,
 }: {
   sessions: TraceableSession[];
   /** The run on screen, so the list can never disagree with the tree. */
@@ -56,6 +58,8 @@ export function TraceRunList({
   /** The date filter in force, and what the project holds without it. */
   range: DateRange;
   total: number;
+  /** Whether the list is narrowed to runs with at least one OTEL span. */
+  otelOnly: boolean;
 }) {
   return (
     <nav className={open ? "runs" : "runs shut"} aria-label="Recorded runs">
@@ -64,13 +68,37 @@ export function TraceRunList({
         {/*
           A filtered list has to say what it is a subset of. Without the
           denominator the reader counts what is on screen and believes it is
-          everything - the same bug as a share with no total beside it.
+          everything - the same bug as a share with no total beside it. The
+          OTEL filter is scope, the same as the project itself, so it rides on
+          `total` rather than needing a second denominator - it names itself
+          in the caption instead.
         */}
         <span>
           {isFiltered(range)
-            ? `${sessions.length.toLocaleString()} of ${total.toLocaleString()} · ${describeRange(range)}`
-            : `${sessions.length.toLocaleString()} in this project`}
+            ? `${sessions.length.toLocaleString()} of ${total.toLocaleString()} · ${describeRange(range)}${otelOnly ? " · OTEL only" : ""}`
+            : `${sessions.length.toLocaleString()} in this project${otelOnly ? " · OTEL only" : ""}`}
         </span>
+
+        {/*
+          A filter, not a glance - so it gets `aria-pressed`, not the
+          `aria-expanded` the disclosure button beside it uses. Its own form:
+          submitting either must never also submit the other's hidden value.
+        */}
+        <form action={setOtelOnly} className="otel-toggle">
+          <input type="hidden" name="otel" value={otelOnly ? "false" : "true"} />
+          <button
+            type="submit"
+            className="icon-btn otel-btn"
+            aria-pressed={otelOnly}
+            title={otelOnly ? "Show every run" : "Show only runs with an OTEL span"}
+          >
+            <span aria-hidden="true">{otelOnly ? "◆" : "◇"}</span>
+            {/* Visible now, not just the accessible name: an icon nobody has
+                learned yet is decoration, and "OTEL only" is what tells this
+                control apart from the plain collapse chevron beside it. */}
+            <span className="otel-btn-label">OTEL only</span>
+          </button>
+        </form>
 
         {/* The count stays visible when the list does not, so collapsing hides
             the rows and never the figure. */}
@@ -229,5 +257,5 @@ function SortHeader({
  */
 function when(session: TraceableSession): string {
   if (!session.endedAt) return "not recorded";
-  return session.endedAt.replace("T", " ").slice(0, 16);
+  return localDateMinute(session.endedAt);
 }

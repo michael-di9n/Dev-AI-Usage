@@ -916,6 +916,8 @@ export interface LiveEvidence {
 export interface Receipt {
   /** True only when something this setting is responsible for actually arrived. */
   receiving: boolean;
+  /** The same fact, as a number - what the vessel's water level reads off. */
+  count: number;
   /** The count, in words, for the light's title and the panel's line. */
   detail: string;
 }
@@ -966,6 +968,7 @@ const RECEIPTS: Record<string, (live: LiveEvidence) => Receipt> = {
  */
 const count = (n: number, noun: string, plural = `${noun}s`): Receipt => ({
   receiving: n > 0,
+  count: n,
   detail: `${n.toLocaleString()} ${n === 1 ? noun : plural} received`,
 });
 

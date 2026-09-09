@@ -346,6 +346,24 @@ describe("the ladder", () => {
     expect(receiptFor(at("CLAUDE_CODE_ENABLE_TELEMETRY"), live)!.receiving).toBe(true);
   });
 
+  /**
+   * The raw number, not just the sentence built from it - this is what a met
+   * vessel's water level reads off (`waterFill` in `ReadinessPipe`'s `Stop`),
+   * so `detail` agreeing with `count` in words is not enough on its own.
+   */
+  it("carries the same number the sentence was built from", () => {
+    const cells = requirementCells(scanOf(FULL_ENV));
+    const at = (key: string) => cellFor(cells, key);
+    const live = { ...NOTHING_RECEIVED, events: 12, metrics: 3, spans: 7 };
+
+    expect(receiptFor(at("OTEL_LOGS_EXPORTER"), live)!.count).toBe(12);
+    expect(receiptFor(at("OTEL_METRICS_EXPORTER"), live)!.count).toBe(3);
+    expect(receiptFor(at("OTEL_TRACES_EXPORTER"), live)!.count).toBe(7);
+    // The switch/protocol/endpoint trio shares one count: every signal that
+    // could have arrived, since any of them proves all three.
+    expect(receiptFor(at("CLAUDE_CODE_ENABLE_TELEMETRY"), live)!.count).toBe(22);
+  });
+
   it("reports nothing received as a measured zero, never as a gap", () => {
     // The receiver runs in this process and the database is open, so "none"
     // is an answer. The house rule cuts the other way here.

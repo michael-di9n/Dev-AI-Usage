@@ -3,6 +3,7 @@ import type { LiveEvidence, SettingsScan } from "../domain/instrumentation";
 import { TAP_LINES, tapLines, type TraceTap } from "../domain/traceTap";
 import type { Signal } from "../domain/types";
 import { SettingsScanner } from "../ingest/settings/SettingsScanner";
+import { sync } from "./background-sync";
 import { app } from "./dashboard";
 import { selectedRepo, type PickableProject } from "./selected-repo";
 import { USER_SETTINGS_PATH } from "./user-settings-key";
@@ -53,9 +54,17 @@ export interface ObservabilityView {
  * to compare against the address this request actually arrived on.
  */
 export function observabilityView(receiverOrigin: string): ObservabilityView {
+  // Not awaited. A brand-new session's OTLP traffic can already be sitting
+  // in `otel_event`, invisible to this page only because nothing has yet
+  // linked its session to a project - see `live-bus.ts`. Firing a pass here
+  // means opening this page is what closes that gap, rather than whatever
+  // background timer happens to run next; `sync()` is already the timer's
+  // own function; deduplicated, so this never runs two at once.
+  void sync();
+
   const { path, problem, projects } = selectedRepo();
-  const live = liveEvidence();
-  const tap = traceTap(live);
+  const live = liveEvidence(path);
+  const tap = traceTap(live, path);
 
   if (!path) return { scan: null, signals: [], problem: null, selectedPath: null, projects, live, tap };
   if (problem) return { scan: null, signals: [], problem, selectedPath: path, projects, live, tap };
@@ -83,7 +92,7 @@ export function observabilityView(receiverOrigin: string): ObservabilityView {
  * the same four numbers, and asking twice is how a window ends up disagreeing
  * with the page it opened from. Only the records themselves need a query.
  */
-function traceTap(live: LiveEvidence): TraceTap {
+function traceTap(live: LiveEvidence, projectPath: string | null): TraceTap {
   return {
     heard: {
       events: live.events,
@@ -92,16 +101,16 @@ function traceTap(live: LiveEvidence): TraceTap {
       sessions: live.sessions,
       lastSeen: live.otelLastSeen,
     },
-    lines: tapLines(app().queries.otelRecentEvents(TAP_LINES)),
+    lines: tapLines(app().queries.otelRecentEvents(TAP_LINES, projectPath)),
   };
 }
 
-function liveEvidence(): LiveEvidence {
+function liveEvidence(projectPath: string | null): LiveEvidence {
   const queries = app().queries;
-  const otel = queries.otelSummary();
-  const spans = queries.otelSpanSummary();
-  const tools = queries.toolDurationCoverage();
-  const content = queries.contentReceived();
+  const otel = queries.otelSummary(projectPath);
+  const spans = queries.otelSpanSummary(projectPath);
+  const tools = queries.toolDurationCoverage(projectPath);
+  const content = queries.contentReceived(projectPath);
 
   return {
     events: otel.events,

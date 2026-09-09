@@ -1,4 +1,5 @@
 import { app } from "./dashboard";
+import { notifyLiveChange } from "./live-bus";
 
 /**
  * Keeping the open dashboard up to date with itself.
@@ -95,6 +96,12 @@ async function runOnce(): Promise<void> {
 
     for (const f of failed) console.error(`[sync] ${f.sourceId}: ${f.detail}`);
     if (rows > 0 || failed.length > 0) console.log(`[sync] ${detail}`);
+
+    // A new row can be the one thing an open trace-tap terminal was waiting
+    // on - the session that links a brand-new run to its project, most
+    // often - so it hears about this pass the same way it hears about an
+    // OTLP record.
+    if (rows > 0) notifyLiveChange();
   } catch (error) {
     // Logged, never thrown. An import that cannot run must not take the
     // dashboard down with it - every figure already in the database is still

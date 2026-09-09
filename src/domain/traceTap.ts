@@ -26,6 +26,8 @@
  * setting that would fill it.
  */
 
+import { localTime } from "./localClock";
+
 /** One record as the database hands it over. */
 export interface TapRecord {
   ts: string;
@@ -79,6 +81,29 @@ export interface TraceTap {
 
 /** How many records the window draws. A window, not an archive. */
 export const TAP_LINES = 40;
+
+/**
+ * How full a vessel reads, given the count backing it.
+ *
+ * One point per hundred: a vessel that has heard a dozen records and one that
+ * has heard eighty read the same, at 1%, because a reader comparing two
+ * vessels by eye cannot tell twelve from eighty apart anyway, and both are
+ * true zeroes of the question this fill answers - "is this vessel worth
+ * calling full". Every hundred after that earns another point, plainly,
+ * rather than in named steps a reader has to have learned first.
+ *
+ * Capped at 80, matching `--fill`'s ceiling everywhere else in this diagram -
+ * see `.rp-node.met` in globals.css - so a receiver that has heard a great
+ * deal still reads as "there is a surface here", never as the one brimming,
+ * finished-looking vessel among vessels that never are.
+ *
+ * Shared by the Trace terminus (`tap.heard.events`) and every "met" node in
+ * the pipe (`Receipt.count`, which is metrics for the metrics node, spans for
+ * the spans node, and so on) - one formula, whatever the count means.
+ */
+export function waterFill(count: number): number {
+  return Math.min(80, 1 + Math.floor(count / 100));
+}
 
 /**
  * Four per row, and a count of the rest.
@@ -168,16 +193,14 @@ function printable(value: unknown): string {
 }
 
 /**
- * `2026-09-08T04:12:33.481Z` -> `04:12:33`.
+ * `2026-09-08T04:12:33.481Z` -> `14:12:33` on a UTC+10 machine.
  *
- * Anything that is not an ISO instant is printed as it arrived rather than
- * sliced blind: a timestamp cut at the wrong offset is a clock that lies, and
- * this is the one field a reader uses to tell "just now" from "last Tuesday".
+ * In the reader's own timezone, not the stored one - see `localClock.ts`.
+ * This is the one field a reader uses to tell "just now" from "last Tuesday",
+ * and a clock that is honestly ten hours wrong reads as far more wrong than
+ * one that is merely unparsed.
  */
-function clockOf(ts: string): string {
-  const t = ts.indexOf("T");
-  return t === -1 ? ts : ts.slice(t + 1, t + 9);
-}
+const clockOf = localTime;
 
 /**
  * Which of the three things the window has to say.

@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   TAP_LINES,
   banner,
   glitch,
   tapState,
+  waterFill,
   type TapLine,
   type TraceTap,
 } from "../domain/traceTap";
+import { localDateTime } from "../domain/localClock";
+import { LiveTap } from "./LiveRefresh";
 
 /**
  * The terminus of the pipe, opened: what is actually coming down the line.
@@ -53,6 +57,9 @@ export function TraceMonitor({ on, tap }: { on: boolean; tap: TraceTap }) {
       <button
         type="button"
         className={on ? "rp-end on" : "rp-end"}
+        // Overrides the flat `--fill` `.rp-end`/`.rp-end.on` set in CSS: how
+        // much has actually arrived, not just whether the tier is complete.
+        style={{ "--fill": `${waterFill(tap.heard.events)}%` } as CSSProperties}
         aria-haspopup="dialog"
         /*
          * The whole of it, because this control is a circle with one word in
@@ -122,6 +129,14 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
             channel, which is the rule the annunciator strip is drawn by. */}
         <i className={on ? "mon-led on" : "mon-led"} aria-hidden="true" />
         <span className="mon-state">{on ? "LINE OPEN" : "LINE DRY"}</span>
+        {/*
+          A tap that only ever shows the page it was opened on is a
+          screenshot, not a tap - the reader opens this to watch the next
+          record land, not to reopen it after every one. Pushed, not polled:
+          see `LiveTap`. Scoped to the window itself, so the connection opens
+          and closes with the dialog.
+        */}
+        <LiveTap />
       </p>
 
       {/* Flavour, and honest flavour: this is what the window is showing. It
@@ -146,7 +161,7 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
         <Cell label="sessions" n={tap.heard.sessions} />
         <div>
           <dt>last heard</dt>
-          <dd>{tap.heard.lastSeen === null ? "never" : tap.heard.lastSeen.replace("T", " ").slice(0, 19)}</dd>
+          <dd>{tap.heard.lastSeen === null ? "never" : localDateTime(tap.heard.lastSeen)}</dd>
         </div>
       </dl>
 

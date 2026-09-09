@@ -165,6 +165,11 @@ CREATE TABLE IF NOT EXISTS otel_event (
   attrs_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS otel_event_name ON otel_event(name, ts);
+-- Scoping the Observability page's live evidence to one project joins this
+-- table to `session` by session_id. Partial: most installs have one project,
+-- so most rows would sit on one side of the predicate anyway.
+CREATE INDEX IF NOT EXISTS otel_event_session
+  ON otel_event(session_id) WHERE session_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS otel_metric (
   id         TEXT PRIMARY KEY,
@@ -175,6 +180,8 @@ CREATE TABLE IF NOT EXISTS otel_metric (
   attrs_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS otel_metric_name ON otel_metric(name, ts);
+CREATE INDEX IF NOT EXISTS otel_metric_session
+  ON otel_metric(session_id) WHERE session_id IS NOT NULL;
 
 -- Findings, from any rule family. Deliberately carries no measure column of
 -- its own: what is worth counting differs per family, so it goes in

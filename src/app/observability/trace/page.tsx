@@ -92,6 +92,7 @@ export default async function TracePage() {
               open={view.runsOpen}
               range={view.range}
               total={view.total}
+              otelOnly={view.otelOnly}
             />
 
             <div className="trace-main">

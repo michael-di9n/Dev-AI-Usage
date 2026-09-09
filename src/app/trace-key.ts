@@ -62,3 +62,12 @@ export const TRACE_ROW_LIMIT = "trace.rowLimit";
  * two objects exist to offer.
  */
 export const TRACE_PATH_STEPS = "trace.pathSteps";
+
+/**
+ * Whether the run list is narrowed to runs with OTEL spans.
+ *
+ * A stored choice like the other five: it changes what the list shows, not
+ * how it's drawn, so it deserves its own key rather than folding into
+ * `TRACE_RUNS_OPEN` (which only ever hides the list, never the rows in it).
+ */
+export const TRACE_OTEL_ONLY = "trace.otelOnly";

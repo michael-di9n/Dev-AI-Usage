@@ -5,6 +5,7 @@ import {
   type CSSProperties, type PointerEvent as ReactPointerEvent,
 } from "react";
 import { DEFAULT_PATH_STEPS, PATH_STEPS_STEP, type PathStep, type StepKind, type TracePath as TracePathData } from "../domain/tracePath";
+import { localDateTime } from "../domain/localClock";
 import { showFewerPathSteps, showMorePathSteps } from "../app/trace-actions";
 import { AgentIcon, McpIcon, MessageIcon, SkillIcon, ToolIcon } from "./icons";
 import { Value } from "./primitives";
@@ -315,7 +316,7 @@ function StepWindow({ step, from, index, total, onClose }: {
       <p className="tp-window-where">
         Step {index.toLocaleString()} of {total.toLocaleString()}
         {step.count > 1 ? <> · {step.count.toLocaleString()} calls, collapsed into one step</> : null}
-        {step.at ? <> · started {step.at.replace("T", " ").slice(0, 19)}</> : null}
+        {step.at ? <> · started {localDateTime(step.at)}</> : null}
       </p>
 
       <p className="tp-window-ms">

@@ -1910,7 +1910,7 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
    and the button stays centred against both. */
 .runs-head {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
 }
 .runs-head span {
@@ -1922,8 +1922,10 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
   margin-top: 2px;
 }
 /* The count keeps its place when the rows go, so collapsing the list hides the
-   runs and never the figure. */
-.runs-toggle { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+   runs and never the figure. Both controls span both rows for the same
+   reason: neither is about the title row alone. */
+.otel-toggle { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+.runs-toggle { grid-column: 3; grid-row: 1 / span 2; margin: 0; }
 
 /* A control that is only an icon. Square, so the hit area is a target rather
    than the glyph's own bounding box - 28px is the smallest that stays
@@ -1946,6 +1948,16 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
 .icon-btn:hover { background: var(--shade); color: var(--text); border-color: var(--line); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .icon-btn svg { display: block; }
+.icon-btn[aria-pressed="true"] { color: var(--accent-strong); background: var(--accent-tint); border-color: var(--accent); }
+/* The OTEL filter sits beside the plain collapse chevron and is easy to miss
+   as just another icon - a border of its own, even off, is what tells the
+   two apart before either is clicked. */
+.otel-toggle .icon-btn { border-color: var(--line); }
+.otel-toggle .icon-btn[aria-pressed="true"] { border-color: var(--accent); }
+/* This one control carries a visible label, so it earns width instead of
+   staying square like the icon-only buttons beside it. */
+.otel-btn { width: auto; height: 28px; gap: 5px; padding: 0 9px; }
+.otel-btn-label { font-size: 11px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
 
 /* The column header. Same grid as the rows under it, so the labels sit over
    the things they name rather than near them. */
@@ -3960,6 +3972,14 @@ button.rp-end:hover { border-color: var(--accent-strong); }
 .mon-bar b { color: var(--term-key); font-weight: 700; letter-spacing: 0.02em; }
 .mon-where { color: var(--term-dim); }
 .mon-state { color: var(--term-dim); letter-spacing: 0.08em; margin-left: auto; }
+/* LiveTap is a status, not a control - nothing to click, so no border or
+   hover, just the dot and the word in the terminal's own tokens. */
+.tap-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--term-dim); font-size: 12px;
+}
+.mon-bar .live-dot { background: var(--term-dim); }
+.mon-bar .live-dot.on { background: var(--term-key); }
 
 /* Lit or unlit, with the word beside it. The lamp is never the only channel. */
 .mon-led {

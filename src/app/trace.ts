@@ -6,10 +6,12 @@ import { NO_RANGE, describeRange, parseRange, runsInRange, type DateRange } from
 import { buildPath, freshSteps, pathStepsOf, type TracePath } from "../domain/tracePath";
 import { buildTrace, type TraceTree, capTree, traceRowsOf } from "../domain/traceTree";
 import type { SessionUsageRow, TraceableSession } from "../db/QueryRepository";
+import { sync } from "./background-sync";
 import { app } from "./dashboard";
 import { SELECTED_REPO } from "./repo-key";
 import {
   SELECTED_SESSION,
+  TRACE_OTEL_ONLY,
   TRACE_PATH_STEPS,
   TRACE_ROW_LIMIT, TRACE_RUNS_OPEN, TRACE_RUNS_ORDER, TRACE_RUNS_RANGE, TRACE_RUN_BANDS,
 } from "./trace-key";
@@ -98,6 +100,8 @@ export interface TraceView {
   order: RunOrder;
   bands: RunBands;
   runsOpen: boolean;
+  /** Whether the list is narrowed to runs with at least one OTEL span. */
+  otelOnly: boolean;
   /**
    * Set when a stored choice no longer resolves. A sentence naming what
    * happened, never an empty page.
@@ -143,7 +147,10 @@ export function exportScope(): ExportScope {
   const stored = queries.readState(SELECTED_REPO);
   const project = projects.find((p) => p.path === stored) ?? projects[0]!;
 
-  const mine = all.filter((session) => session.projectPath === project.path);
+  const otelOnly = queries.readState(TRACE_OTEL_ONLY) === "true";
+  const mine = all
+    .filter((session) => session.projectPath === project.path)
+    .filter((session) => !otelOnly || session.otelSpans > 0);
   // Filtered, then sorted - the same order as the page, so the file reads in
   // the order the list did.
   const order = parseOrder(queries.readState(TRACE_RUNS_ORDER));
@@ -156,6 +163,11 @@ export function exportScope(): ExportScope {
 }
 
 export function traceView(now: Date = new Date()): TraceView {
+  // Not awaited - see the same call in `observability.ts`. A run just
+  // finished elsewhere can already have blocks and spans on disk that this
+  // page cannot show until the importer has read them in.
+  void sync();
+
   const queries = app().queries;
   const all = queries.traceableSessions(TRACEABLE_LIMIT);
   const range = parseRange(queries.readState(TRACE_RUNS_RANGE));
@@ -166,6 +178,7 @@ export function traceView(now: Date = new Date()): TraceView {
       rows: { shown: 0, total: 0 }, path: null, freshSteps: 0,
       range: NO_RANGE, total: 0, cost: null, problem: null,
       order: DEFAULT_ORDER, bands: DEFAULT_BANDS, runsOpen: true,
+      otelOnly: queries.readState(TRACE_OTEL_ONLY) === "true",
       nothingCaptured: queries.traceBlockCount() === 0,
     };
   }
@@ -192,7 +205,9 @@ export function traceView(now: Date = new Date()): TraceView {
    * stable sort on equal costs leaves them in the order they arrived.
    */
   const order = parseOrder(queries.readState(TRACE_RUNS_ORDER));
-  const mine = all.filter((s) => s.projectPath === project.path);
+  const otelOnly = queries.readState(TRACE_OTEL_ONLY) === "true";
+  const byProject = all.filter((s) => s.projectPath === project.path);
+  const mine = byProject.filter((s) => !otelOnly || s.otelSpans > 0);
   // Filtered, then sorted. The other way round sorts rows that are about to be
   // thrown away, which is the same answer and more of it.
   const sessions = sortRuns(runsInRange(mine, range), order);
@@ -218,6 +233,7 @@ export function traceView(now: Date = new Date()): TraceView {
     // Open unless it was closed. Nothing stored is a reader who has never
     // touched the control, and the list is the page's index.
     runsOpen: queries.readState(TRACE_RUNS_OPEN) !== "false",
+    otelOnly,
     nothingCaptured: false,
   };
 
@@ -240,8 +256,12 @@ export function traceView(now: Date = new Date()): TraceView {
       cost: null,
       problem:
         wrongProject ??
-        `No run in ${project.name} ended ${describeRange(range) ?? "in this range"}. ` +
-          `${mine.length.toLocaleString()} run${mine.length === 1 ? " is" : "s are"} hidden by the date filter.`,
+        (otelOnly && mine.length === 0
+          ? `No run in ${project.name} has an OTEL span. ` +
+            `${byProject.length.toLocaleString()} run${byProject.length === 1 ? " is" : "s are"} hidden by the OTEL-only filter.`
+          : `No run in ${project.name} ended ${describeRange(range) ?? "in this range"}` +
+            `${otelOnly ? " with an OTEL span" : ""}. ` +
+            `${mine.length.toLocaleString()} run${mine.length === 1 ? " is" : "s are"} hidden by the date filter.`),
     };
   }
 

@@ -5,9 +5,11 @@ import {
   glitch,
   tapLines,
   tapState,
+  waterFill,
   type TapLine,
   type TapRecord,
 } from "../src/domain/traceTap";
+import { localTime } from "../src/domain/localClock";
 
 /**
  * The window on the trace terminus.
@@ -18,8 +20,10 @@ import {
  * the third is the only reason the sign is generated rather than typed out.
  */
 
+const FIXTURE_TS = "2026-09-08T04:12:33.481Z";
+
 const record = (over: Partial<TapRecord> = {}): TapRecord => ({
-  ts: "2026-09-08T04:12:33.481Z",
+  ts: FIXTURE_TS,
   name: "user_prompt",
   sessionId: "2dd3fbcc-9f21-4a1e-b0f1-0c9a77f2e311",
   attrs: { model: "claude-opus-5", prompt: "hello" },
@@ -27,7 +31,9 @@ const record = (over: Partial<TapRecord> = {}): TapRecord => ({
 });
 
 const line = (over: Partial<TapLine> = {}): TapLine => ({
-  at: "04:12:33",
+  // The reader's own zone, not the fixture's UTC one - whichever machine
+  // runs this test, so the assertion below holds without pinning a TZ.
+  at: localTime(FIXTURE_TS),
   name: "user_prompt",
   session: "2dd3fbcc",
   attrs: [],
@@ -38,7 +44,7 @@ const line = (over: Partial<TapLine> = {}): TapLine => ({
 describe("tapLines", () => {
   it("prints the clock, not the date, and shortens the session", () => {
     const [row] = tapLines([record()]);
-    expect(row?.at).toBe("04:12:33");
+    expect(row?.at).toBe(localTime(FIXTURE_TS));
     expect(row?.session).toBe("2dd3fbcc");
   });
 
@@ -197,5 +203,25 @@ describe("glitch", () => {
   it("replaces the ink with something that is not the ink", () => {
     const out = glitch(rows, 1, () => 0);
     expect(out.join("")).not.toContain("#");
+  });
+});
+
+describe("waterFill", () => {
+  it("is 1% for anything under a hundred, including zero", () => {
+    expect(waterFill(0)).toBe(1);
+    expect(waterFill(1)).toBe(1);
+    expect(waterFill(99)).toBe(1);
+  });
+
+  it("adds one point per hundred after that", () => {
+    expect(waterFill(100)).toBe(2);
+    expect(waterFill(199)).toBe(2);
+    expect(waterFill(200)).toBe(3);
+    expect(waterFill(1_000)).toBe(11);
+  });
+
+  it("caps at 80, whatever the count", () => {
+    expect(waterFill(7_900)).toBe(80);
+    expect(waterFill(50_000)).toBe(80);
   });
 });

@@ -45,6 +45,40 @@ export function LiveRefresh({ seconds = 5 }: { seconds?: number }) {
 }
 
 /**
+ * Refreshes the moment the receiver hears something, instead of on a timer.
+ *
+ * The trace-tap terminal used to use `LiveRefresh` here, which meant picking
+ * a number: too long and a new line sits unseen for most of the wait, too
+ * short and the page re-queries on a clock whether or not anything happened.
+ * `/api/otlp/stream` exists so it does not have to be either - the request
+ * sits open at essentially no cost until `notifyLiveChange` fires, and
+ * `router.refresh()` runs right then rather than at the next tick.
+ *
+ * `EventSource` reconnects on its own when the stream drops - most often a
+ * dev server restart - so the only state this keeps is what to show while
+ * that is happening.
+ */
+export function LiveTap() {
+  const router = useRouter();
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    const source = new EventSource("/api/otlp/stream");
+    source.onopen = () => setConnected(true);
+    source.onerror = () => setConnected(false);
+    source.onmessage = () => router.refresh();
+    return () => source.close();
+  }, [router]);
+
+  return (
+    <span className="tap-status" aria-live="polite">
+      <span className={connected ? "live-dot on" : "live-dot"} aria-hidden="true" />
+      {connected ? "Live" : "Reconnecting…"}
+    </span>
+  );
+}
+
+/**
  * The receiver's own address, read from the browser.
  *
  * Worth a client component for three lines: the port is whatever Next settled

@@ -91,11 +91,11 @@ describe("BandMarks", () => {
  * runs it is hiding.
  */
 const SESSIONS: TraceableSession[] = [
-  { sessionId: "aaaaaaaa-1", projectPath: "/p", startedAt: "2026-08-01T09:00", endedAt: "2026-08-01T10:00", blocks: 120, costUsd: 22.23, toolCalls: 70 },
-  { sessionId: "bbbbbbbb-2", projectPath: "/p", startedAt: "2026-08-02T09:00", endedAt: "2026-08-02T10:00", blocks: 8, costUsd: null, toolCalls: 0 },
+  { sessionId: "aaaaaaaa-1", projectPath: "/p", startedAt: "2026-08-01T09:00", endedAt: "2026-08-01T10:00", blocks: 120, costUsd: 22.23, toolCalls: 70, otelSpans: 0 },
+  { sessionId: "bbbbbbbb-2", projectPath: "/p", startedAt: "2026-08-02T09:00", endedAt: "2026-08-02T10:00", blocks: 8, costUsd: null, toolCalls: 0, otelSpans: 0 },
 ];
 
-const list = (over: { open?: boolean; order?: RunOrder; range?: DateRange; total?: number } = {}) =>
+const list = (over: { open?: boolean; order?: RunOrder; range?: DateRange; total?: number; otelOnly?: boolean } = {}) =>
   renderToStaticMarkup(
     createElement(TraceRunList, {
       sessions: SESSIONS,
@@ -105,6 +105,7 @@ const list = (over: { open?: boolean; order?: RunOrder; range?: DateRange; total
       open: over.open ?? true,
       range: over.range ?? NO_RANGE,
       total: over.total ?? SESSIONS.length,
+      otelOnly: over.otelOnly ?? false,
     }),
   );
 
@@ -142,6 +143,19 @@ describe("TraceRunList", () => {
     expect(list({ open: false })).toContain('aria-expanded="false"');
     expect(list()).toContain("Collapse the run list");
     expect(list({ open: false })).toContain("Expand the run list");
+  });
+
+  /**
+   * A filter, not a disclosure - so it gets `aria-pressed`, and the caption
+   * has to say the filter is on, the same way it already says a date range
+   * is on. Without either, a reader who turned it on and left would come back
+   * to a shorter list with no explanation.
+   */
+  it("gives the OTEL filter a name and a state, and says so in the count", () => {
+    expect(list({ otelOnly: true })).toContain('aria-pressed="true"');
+    expect(list({ otelOnly: false })).toContain('aria-pressed="false"');
+    expect(headCount(list({ otelOnly: true }))).toBe("2 in this project · OTEL only");
+    expect(headCount(list({ otelOnly: false }))).toBe("2 in this project");
   });
 
   /**

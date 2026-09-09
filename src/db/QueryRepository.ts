@@ -141,6 +141,12 @@ export interface TraceableSession {
   /** Null when no message in the run had a priced model. Never a zero. */
   costUsd: number | null;
   toolCalls: number;
+  /**
+   * Rows this run has in `otel_span`. A genuine zero either way: OTEL was
+   * never on for this run, or it was on but this run made no tool calls to
+   * span. Never coalesced from a null - the subquery always returns a count.
+   */
+  otelSpans: number;
 }
 
 /** One run's usage, split by model so the parts can be priced. */
@@ -664,7 +670,8 @@ export class QueryRepository {
                 COUNT(*)  AS blocks,
                 (SELECT project_path FROM session s WHERE s.session_id = b.session_id) AS project_path,
                 (SELECT SUM(m.cost_usd_derived) FROM message m WHERE m.session_id = b.session_id) AS cost_usd,
-                (SELECT COUNT(*) FROM tool_call t WHERE t.session_id = b.session_id) AS tool_calls
+                (SELECT COUNT(*) FROM tool_call t WHERE t.session_id = b.session_id) AS tool_calls,
+                (SELECT COUNT(*) FROM otel_span o WHERE o.session_id = b.session_id) AS otel_spans
            FROM message_block b
           GROUP BY b.session_id
           ORDER BY ended_at DESC
@@ -679,6 +686,7 @@ export class QueryRepository {
         blocks: Number(r.blocks),
         costUsd: r.cost_usd == null ? null : Number(r.cost_usd),
         toolCalls: Number(r.tool_calls ?? 0),
+        otelSpans: Number(r.otel_spans ?? 0),
       }));
   }
 
@@ -703,7 +711,8 @@ export class QueryRepository {
               COUNT(*)  AS blocks,
               (SELECT project_path FROM session s WHERE s.session_id = b.session_id) AS project_path,
               (SELECT SUM(m.cost_usd_derived) FROM message m WHERE m.session_id = b.session_id) AS cost_usd,
-              (SELECT COUNT(*) FROM tool_call t WHERE t.session_id = b.session_id) AS tool_calls
+              (SELECT COUNT(*) FROM tool_call t WHERE t.session_id = b.session_id) AS tool_calls,
+              (SELECT COUNT(*) FROM otel_span o WHERE o.session_id = b.session_id) AS otel_spans
          FROM message_block b
         WHERE b.session_id = ?
         GROUP BY b.session_id`,
@@ -722,6 +731,7 @@ export class QueryRepository {
       // did not cost nothing.
       costUsd: row.cost_usd == null ? null : Number(row.cost_usd),
       toolCalls: Number(row.tool_calls ?? 0),
+      otelSpans: Number(row.otel_spans ?? 0),
     };
   }
 
@@ -881,23 +891,50 @@ export class QueryRepository {
   }
 
   /**
+   * The predicate that scopes a live-evidence query to one project.
+   *
+   * `otel_event`/`otel_metric`/`otel_span`/`tool_call` carry a `session_id`
+   * but no project of their own - `session.project_path` is the only place
+   * that fact lives. Null means "every project", not "no project": the
+   * Observability page always resolves a project before asking, but this
+   * stays honest for a caller that has not chosen one yet.
+   *
+   * A row whose `session_id` is null can never match the subquery, in either
+   * direction - it is excluded from every project's count rather than
+   * credited to one, which is the same rule `traceableSessions` applies by
+   * calling an unrecorded project "not recorded" instead of guessing.
+   */
+  private projectSessionFilter(projectPath: string | null): { predicate: string; params: unknown[] } {
+    if (projectPath === null) return { predicate: "1=1", params: [] };
+    return {
+      predicate: "session_id IN (SELECT session_id FROM session WHERE project_path = ?)",
+      params: [projectPath],
+    };
+  }
+
+  /**
    * Has the receiver ever heard anything, and from how many sessions.
    *
    * `lastSeen` is null rather than an empty string when nothing has arrived, so
    * the page can say "nothing yet" instead of rendering a blank timestamp that
    * reads like a broken clock.
    */
-  otelSummary(): OtelSummary {
+  otelSummary(projectPath: string | null = null): OtelSummary {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
     const row = this.db.one<Record<string, unknown>>(
-      `SELECT (SELECT COUNT(*) FROM otel_event)  AS events,
-              (SELECT COUNT(*) FROM otel_metric) AS metrics,
+      `SELECT (SELECT COUNT(*) FROM otel_event  WHERE ${predicate})  AS events,
+              (SELECT COUNT(*) FROM otel_metric WHERE ${predicate}) AS metrics,
               (SELECT COUNT(DISTINCT session_id) FROM (
-                 SELECT session_id FROM otel_event  WHERE session_id IS NOT NULL
-                 UNION SELECT session_id FROM otel_metric WHERE session_id IS NOT NULL
+                 SELECT session_id FROM otel_event  WHERE session_id IS NOT NULL AND ${predicate}
+                 UNION SELECT session_id FROM otel_metric WHERE session_id IS NOT NULL AND ${predicate}
                )) AS sessions,
               (SELECT MAX(ts) FROM (
-                 SELECT ts FROM otel_event UNION ALL SELECT ts FROM otel_metric
+                 SELECT ts FROM otel_event  WHERE ${predicate}
+                 UNION ALL SELECT ts FROM otel_metric WHERE ${predicate}
                )) AS last_seen`,
+      // The predicate appears six times above; each repeat needs its own copy
+      // of its params.
+      Array.from({ length: 6 }, () => params).flat(),
     );
     return {
       events: Number(row?.events ?? 0),
@@ -922,14 +959,16 @@ export class QueryRepository {
    * reader checking whether they set it correctly should not have to reason
    * about which half of the corpus answered.
    */
-  contentReceived(): ContentReceived {
+  contentReceived(projectPath: string | null = null): ContentReceived {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
     const of = (name: string, attr: string): number =>
       this.db.one<{ n: number }>(
         `SELECT COUNT(*) AS n FROM otel_event
           WHERE name = ?
             AND json_extract(attrs_json, ?) IS NOT NULL
-            AND json_extract(attrs_json, ?) <> '<REDACTED>'`,
-        [name, `$.${attr}`, `$.${attr}`],
+            AND json_extract(attrs_json, ?) <> '<REDACTED>'
+            AND ${predicate}`,
+        [name, `$.${attr}`, `$.${attr}`, ...params],
       )?.n ?? 0;
 
     return {
@@ -945,12 +984,15 @@ export class QueryRepository {
    * duration is one that arrived without an end timestamp, and reporting it as
    * a zero-millisecond call would be a measurement nobody took.
    */
-  otelSpanSummary(): OtelSpanSummary {
+  otelSpanSummary(projectPath: string | null = null): OtelSpanSummary {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
     const row = this.db.one<Record<string, unknown>>(
       `SELECT COUNT(*) AS spans,
               SUM(CASE WHEN duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS timed,
               MAX(started_at) AS last_seen
-         FROM otel_span`,
+         FROM otel_span
+        WHERE ${predicate}`,
+      params,
     );
     return {
       spans: Number(row?.spans ?? 0),
@@ -960,12 +1002,13 @@ export class QueryRepository {
   }
 
   /** Newest first: this feeds a terminal, which scrolls the way a log does. */
-  otelRecentEvents(limit = 60): OtelEventLine[] {
+  otelRecentEvents(limit = 60, projectPath: string | null = null): OtelEventLine[] {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
     return this.db
       .all<Record<string, unknown>>(
         `SELECT ts, name, session_id, request_id, attrs_json
-           FROM otel_event ORDER BY ts DESC, rowid DESC LIMIT ?`,
-        [limit],
+           FROM otel_event WHERE ${predicate} ORDER BY ts DESC, rowid DESC LIMIT ?`,
+        [...params, limit],
       )
       .map((r) => ({
         ts: String(r.ts),
@@ -1034,11 +1077,14 @@ export class QueryRepository {
    * em dash at zero timed calls. "0% of tools are slow" is a claim; "no
    * durations recorded yet" is the truth before exercise 02.
    */
-  toolDurationCoverage(): { timed: number; total: number } {
+  toolDurationCoverage(projectPath: string | null = null): { timed: number; total: number } {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
     const row = this.db.one<Record<string, unknown>>(
       `SELECT COUNT(*) AS total,
               SUM(CASE WHEN duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS timed
-         FROM tool_call`,
+         FROM tool_call
+        WHERE ${predicate}`,
+      params,
     );
     return { timed: Number(row?.timed ?? 0), total: Number(row?.total ?? 0) };
   }

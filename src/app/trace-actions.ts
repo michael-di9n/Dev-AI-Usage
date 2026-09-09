@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { app } from "./dashboard";
 import { SELECTED_REPO } from "./repo-key";
 import {
-  SELECTED_SESSION, TRACE_PATH_STEPS, TRACE_ROW_LIMIT, TRACE_RUNS_OPEN, TRACE_RUNS_ORDER,
-  TRACE_RUNS_RANGE, TRACE_RUN_BANDS,
+  SELECTED_SESSION, TRACE_OTEL_ONLY, TRACE_PATH_STEPS, TRACE_ROW_LIMIT, TRACE_RUNS_OPEN,
+  TRACE_RUNS_ORDER, TRACE_RUNS_RANGE, TRACE_RUN_BANDS,
 } from "./trace-key";
 import { DEFAULT_TRACE_ROWS, TRACE_ROWS_STEP, traceRowsOf } from "../domain/traceTree";
 import { DEFAULT_PATH_STEPS, PATH_STEPS_STEP, pathStepsOf } from "../domain/tracePath";
@@ -96,6 +96,21 @@ export async function setRunsOpen(formData: FormData): Promise<void> {
   if (open === null) return;
 
   app().writes.setState(TRACE_RUNS_OPEN, open === "true" ? "true" : "false");
+  revalidatePath("/observability/trace");
+}
+
+/**
+ * Whether the run list is narrowed to runs with OTEL spans.
+ *
+ * A filter, not a glance: unlike `setRunsOpen`, this changes which runs are
+ * counted, so `exportScope` has to read the same key to keep "export all"
+ * meaning what the list on screen shows.
+ */
+export async function setOtelOnly(formData: FormData): Promise<void> {
+  const on = text(formData, "otel");
+  if (on === null) return;
+
+  app().writes.setState(TRACE_OTEL_ONLY, on === "true" ? "true" : "false");
   revalidatePath("/observability/trace");
 }
 
