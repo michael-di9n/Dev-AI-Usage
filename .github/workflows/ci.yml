@@ -1,0 +1,23 @@
+name: CI
+
+# The deterministic checks. Deliberately separate from the Claude workflows: a
+# type error must go red without waiting on a model, and a green tick here must
+# not depend on an API key.
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
