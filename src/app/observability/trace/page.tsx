@@ -4,6 +4,7 @@ import { Section } from "../../../components/primitives";
 import { RunCostBar } from "../../../components/RunCost";
 import { TraceControls } from "../../../components/TraceControls";
 import { TerminalPanel } from "../../../components/TerminalPanel";
+import { TraceEmpty } from "../../../components/TraceEmpty";
 import { TracePath } from "../../../components/TracePath";
 import { TraceRunList } from "../../../components/TraceRunList";
 import { TraceTree } from "../../../components/TraceTree";
@@ -81,7 +82,10 @@ export default async function TracePage() {
           {/* Both controls above everything they scope, acting on change. */}
           <TraceControls projects={view.projects} project={view.project} />
 
-          {view.problem ? <p className="note">{view.problem}</p> : null}
+          {/* Kept when a run is shown - the sentence is then about the run
+              that was substituted. With nothing to show it moves into the
+              empty pane, where the eye lands. */}
+          {view.problem && view.selected ? <p className="note">{view.problem}</p> : null}
 
           <div className="trace-layout">
             <TraceRunList
@@ -226,7 +230,9 @@ export default async function TracePage() {
                     </p>
                   ) : null}
                 </Section>
-              ) : null}
+              ) : (
+                <TraceEmpty problem={view.problem} widen={view.widen} />
+              )}
             </div>
           </div>
         </>

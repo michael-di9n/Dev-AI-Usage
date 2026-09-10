@@ -98,6 +98,71 @@ describe("project-scoped live evidence", () => {
   });
 
   /**
+   * The tap reads three tables as one list. What matters is that a row says
+   * which table it came from, that the list is newest first across all three,
+   * that a switched-off stream contributes nothing, and that the project scope
+   * holds on every arm - a span from project b appearing under project a would
+   * be the bug this file exists to stop, on a new path.
+   */
+  it("otelRecentRecords interleaves the streams asked for, newest first, scoped", () => {
+    otel.writeMetrics([
+      { id: "mp-a", name: "claude_code.token.usage", ts: "2026-08-01T09:06:00Z", value: 12, sessionId: "sess-a", attrs: { type: "input" } },
+    ]);
+
+    const all = queries.otelRecentRecords(10, "/projects/a", ["log", "metric", "span"]);
+    expect(all.map((r) => [r.kind, r.ts])).toEqual([
+      ["metric", "2026-08-01T09:06:00Z"],
+      // The event and the span share an instant; both are here.
+      ["log", "2026-08-01T09:05:00Z"],
+      ["span", "2026-08-01T09:05:00Z"],
+    ].sort((x, y) => (x[1]! < y[1]! ? 1 : x[1]! > y[1]! ? -1 : 0)).map((r) => r) satisfies unknown[]);
+    expect(all.find((r) => r.kind === "metric")).toMatchObject({ value: 12, durationMs: null, status: null });
+    expect(all.find((r) => r.kind === "span")).toMatchObject({ value: null, durationMs: 1_000 });
+
+    // A switched-off stream is not read at all.
+    expect(queries.otelRecentRecords(10, "/projects/a", ["span"]).map((r) => r.kind)).toEqual(["span"]);
+    expect(queries.otelRecentRecords(10, "/projects/a", [])).toEqual([]);
+
+    // Scope holds on every arm: nothing of a's under b, the orphan under neither.
+    expect(queries.otelRecentRecords(10, "/projects/b", ["log", "metric", "span"]).map((r) => r.sessionId))
+      .toEqual(["sess-b", "sess-b"]);
+    expect(queries.otelRecentRecords(10, null, ["log"])).toHaveLength(3);
+  });
+
+  it("otelRecentRecords keeps an unmeasured span duration null", () => {
+    otel.writeSpans([{
+      traceId: "t3", spanId: "sp-c", parentSpanId: null, name: "claude_code.tool",
+      sessionId: "sess-a", toolUseId: null, requestId: null,
+      startedAt: "2026-08-01T09:07:00Z", endedAt: "2026-08-01T09:07:00Z",
+      durationMs: null, status: null, attrs: {},
+    }]);
+    const [newest] = queries.otelRecentRecords(1, "/projects/a", ["span"]);
+    // Null stays null on the way out: a span nobody could time is not a
+    // zero-millisecond call.
+    expect(newest?.durationMs).toBeNull();
+  });
+
+  /**
+   * The two tool settings add attributes rather than un-redacting them, so
+   * the receipt is presence. Counted on both tool event names, because
+   * `tool_parameters` arrives on the decision as well as the result.
+   */
+  it("contentReceived counts the attributes the tool settings add, per project", () => {
+    otel.writeEvents([
+      { id: "td-a", name: "tool_decision", ts: "2026-08-01T09:08:00Z", sessionId: "sess-a", requestId: null, attrs: { tool_name: "Bash", tool_parameters: '{"bash_command":"git"}' } },
+      { id: "tr-a", name: "tool_result", ts: "2026-08-01T09:08:01Z", sessionId: "sess-a", requestId: null, attrs: { tool_name: "Bash", tool_parameters: '{"bash_command":"git"}', tool_input: '{"command":"git status"}' } },
+      // Setting off: the event arrives, the attributes do not.
+      { id: "tr-a2", name: "tool_result", ts: "2026-08-01T09:09:00Z", sessionId: "sess-a", requestId: null, attrs: { tool_name: "Read", tool_input_size_bytes: "40" } },
+      { id: "tr-b", name: "tool_result", ts: "2026-08-02T09:08:00Z", sessionId: "sess-b", requestId: null, attrs: { tool_name: "Read", tool_output: "..." } },
+    ]);
+
+    expect(queries.contentReceived("/projects/a")).toMatchObject({ toolArgs: 2, toolContent: 1 });
+    expect(queries.contentReceived("/projects/b")).toMatchObject({ toolArgs: 0, toolContent: 1 });
+    // A project that sent none reads as a measured zero.
+    expect(queries.contentReceived("/projects/c")).toMatchObject({ toolArgs: 0, toolContent: 0 });
+  });
+
+  /**
    * A record with no session_id belongs to no project - crediting it to
    * whichever project happens to be selected would be a number nobody
    * measured for that project.

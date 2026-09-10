@@ -31,6 +31,7 @@ const THEMED_TOKENS = [
   "--bronze-fg", "--bronze-bg", "--murk",
   "--coin", "--coin-edge", "--coin-line",
   "--term-bg", "--term-line", "--term-fg", "--term-dim", "--term-key",
+  "--term-metric", "--term-span",
   "--decode",
   "--fascia", "--fascia-edge", "--engrave", "--engrave-dim",
   "--knob-face", "--knob-rim", "--pointer", "--recess",
@@ -199,6 +200,13 @@ const PAIRS: [string, string][] = [
   // The lamp's state is written beside the bulb, so the word owes the text
   // floor on the plate even though the bulb only owes the graphic one.
   ["--ok-fg", "--fascia"],
+  // The trace-tap's three inks, each the name of a record on the terminal's
+  // own ground. Body-sized rows, and the word is what a colour-blind reader
+  // gets, so all three owe the text floor there - the key already did.
+  ["--term-key", "--term-bg"], ["--term-metric", "--term-bg"], ["--term-span", "--term-bg"],
+  // The word in a lit terminus: the panel's colour on the accent water, which
+  // is also what the word paints behind itself for the browser probe.
+  ["--panel", "--accent"],
 ];
 
 /**
