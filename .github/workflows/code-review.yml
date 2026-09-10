@@ -75,15 +75,23 @@ jobs:
             7. Follow DRY (Dont repeat yourself) if the functionility exist else where better to resuse than
             redefine
 
+
+
             Write the comment body to /tmp/review.md, then post it with
             `gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/review.md`.
             Use --body-file, never --body: the body contains backticks, quotes
             and $ from the code it quotes, and passing that through the shell
             truncates or mangles it.
 
-            Open with the verdict on its own line: executive summary under 10 words Then
-            list the flags in rule order, each with the file, the line, and the
-            single change that clears it. Use
+            Start with a less than 10 sentence capturing: what was done and if its good to merge?
+            
+            Then write a summary on what you found good and why
+            Then what you found bad about the PR
+            Disucss with reasoning in simple human readible language the suggested fix
+
+            If its an inline comment then be clear on what was discovered and how adn then suggested fix
+            
+            . Use
             `mcp__github_inline_comment__create_inline_comment` (with
             `confirmed: true`) for a flag that belongs on a specific line - a
             reply to an inline comment carries the diff hunk, so a follow-up
@@ -91,9 +99,3 @@ jobs:
 
             End the comment with exactly this line and nothing after it:
             "Reply to any flag with @claude to discuss or fix it."
-
-            Only post GitHub comments - do not return the review as a message. If
-            there are no flags, post the one-line verdict and the reply line, then
-            stop. Do not summarise the pull request, do not praise it, and do not
-            comment on style, naming or test coverage - a long comment is an
-            unread comment.

@@ -18,11 +18,18 @@ on:
 
 jobs:
   claude:
+    # The sender guard is not politeness, it is the loop brake. The code review
+    # workflow signs off with "Reply to any flag with @claude", so its own
+    # comment matches every mention test below. Without this, one clean review
+    # spends a checkout and an `npm ci` to reach a hard fail, and any future
+    # `allowed_bots` turns that dead end into agents answering agents.
     if: |
-      contains(github.event.comment.body, '@claude') ||
-      contains(github.event.review.body, '@claude') ||
-      contains(github.event.issue.body, '@claude') ||
-      contains(github.event.issue.title, '@claude')
+      github.event.sender.type != 'Bot' && (
+        contains(github.event.comment.body, '@claude') ||
+        contains(github.event.review.body, '@claude') ||
+        contains(github.event.issue.body, '@claude') ||
+        contains(github.event.issue.title, '@claude')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write # so "@claude fix this" can push a commit

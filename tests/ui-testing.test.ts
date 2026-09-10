@@ -182,7 +182,10 @@ describe("passed / summariseResults", () => {
  * contrast maths against colours whose ratios are known, which is the part
  * that would otherwise be wrong in a way nobody notices.
  */
-describe("probeScript in a real browser", () => {
+// Vitest's 5s default is sized for pure functions. The first `newPage` in a
+// cold Chrome cost 5002ms on CI and failed this suite on a commit that passed
+// on the retry - the browser is the budget here, not the assertion.
+describe("probeScript in a real browser", { timeout: 30_000 }, () => {
   let browser: Browser;
 
   beforeAll(async () => { browser = await chromium.launch({ channel: "chrome", headless: true }); }, 60_000);
