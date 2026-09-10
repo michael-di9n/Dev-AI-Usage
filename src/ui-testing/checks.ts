@@ -360,7 +360,16 @@ export function populatedChecks(): UiCheck[] {
          this page and only this one is a button. Named by its cell as well, so
          the day the other becomes a control this check still clicks the one it
          is about. */
-      steps: [{ click: ".rp-cell-end button.rp-end" }],
+      /* Open the window, then flip one switch off. The second gesture is the
+         only exercise this suite gets of the stored-selection path on this
+         page, and `log` rather than `span` because it is the stream that is
+         never the last one on - `toggleTapKind` disables the switch that
+         would leave the window reading nothing, and a disabled button would
+         make this step assert nothing at all. */
+      steps: [
+        { click: ".rp-cell-end button.rp-end" },
+        { click: ".mon-kinds .mon-kind[data-kind=\"log\"]", settle: 300 },
+      ],
       assertions: [
         ...BASELINE,
         { kind: "visible", selector: ".mon[open]", why: "The vessel has to open something. A reader who has set all seven nodes wants to know whether anything is arriving, and every other statement of that on the page is a single count inside the panel for one setting - nobody opens seven panels to add up three numbers." },
@@ -368,9 +377,40 @@ export function populatedChecks(): UiCheck[] {
         { kind: "visible", selector: ".mon-tally dd", why: "The counts are the answer the window exists to give, and they are figures rather than dashes because the receiver runs in this process: it was asked, so a zero here is a measurement." },
         { kind: "text", contains: "last heard", why: "A count with no clock beside it cannot distinguish a receiver that is working from one that stopped an hour ago, which is the exact confusion this page exists to clear up - OpenTelemetry reads its settings at launch and never backfills." },
         { kind: "visible", selector: ".mon-kinds .mon-kind[data-kind=\"span\"]", why: "The window reads three streams and remembers which. Without the switches a reader whose metric exporter lands thirty points a minute has a log they cannot read, and no way to quiet it; whether any given stream has lines on this machine is state, and is pinned in tests/trace-tap.test.ts instead." },
+        { kind: "visible", selector: ".mon-kinds .mon-kind[data-kind=\"log\"][aria-pressed=\"false\"]", why: "A switch has to answer the click that flipped it. This is a stored selection, and a control that does not visibly change when clicked is one the reader clicks twice - which used to be the honest reading of it, because the whole page re-rendered behind an import pass before anything moved." },
         { kind: "text", contains: "otel/", why: "The prompt line has to say what is being tailed, and which streams - a window showing spans under a command that names events would be a window misreporting itself." },
         { kind: "visible", selector: ".mon-shut .btn", why: "A modal opened by a click must offer the way out on the page. Escape and the backdrop both work, and neither is discoverable by a reader who has never been shown them." },
         { kind: "absent", text: "$0.00", why: "The house rule, inside the window too: it prints counts and attribute values, so a currency figure appearing here would mean something upstream coalesced a null." },
+      ],
+    },
+    {
+      /**
+       * The count at the end of a row opens the record whole, and doing that
+       * must not cost the reader the tail they were reading. Two windows open
+       * at once is the assertion; which record lands in the second one is
+       * machine-dependent, so what it contains is pinned in
+       * `tests/trace-tap.test.ts` instead.
+       *
+       * Its own check rather than more steps on the one above, because that
+       * one ends with a stream switched off and this needs a row on screen to
+       * click - and a check that depends on the state another check left is a
+       * check that fails in isolation.
+       */
+      name: "A row's count opens the record whole",
+      path: "/observability",
+      viewport: LAPTOP,
+      theme: "dark",
+      steps: [
+        { click: ".rp-cell-end button.rp-end" },
+        { click: ".mon-out .mon-more", settle: 250 },
+      ],
+      assertions: [
+        ...BASELINE,
+        { kind: "visible", selector: ".mon-detail[open]", why: "The count is the only thing on a row that names something the reader cannot otherwise reach - a row saying it has eight more attributes and offering no way to read them is a record half-reported." },
+        { kind: "visible", selector: ".mon-detail .mon-pairs dt", why: "The window has to print the attribute names, not just their values: an unlabelled column of ids and numbers is not a record, and the keys are what a reader is scanning for." },
+        { kind: "visible", selector: ".mon[open]:not(.mon-detail)", why: "Opening one record must not shut the tail it came from. The reader is mid-read of a live window, and losing forty lines to a click that was meant to expand one of them is the thing this control would otherwise cost." },
+        { kind: "text", contains: "whole, not cut to the width of a line", why: "The window has to say how it differs from the row it was opened from, or a reader who sees the same truncated values twice has no reason to believe the second copy." },
+        { kind: "absent", text: "$0.00", why: "The house rule, in the one place on this page that prints an attribute value in full - a coalesced null would surface here first." },
       ],
     },
     {

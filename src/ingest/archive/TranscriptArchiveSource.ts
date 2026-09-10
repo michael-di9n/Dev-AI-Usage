@@ -70,12 +70,23 @@ export class TranscriptArchiveSource implements IngestSource {
       }
 
       const pass = this.repo.beginPass();
+      const seen: string[] = [];
       let stored = 0;
       let bytes = 0;
       for (const file of files) {
         const written = await this.archive(file, pass, at);
         if (written > 0) { stored += 1; bytes += written; }
+        // `saveChunk` already stamped this pass onto the files it wrote, so
+        // only the untouched ones need marking - which is nearly all of them,
+        // and marking them one at a time was the cost of the whole pass. See
+        // `markSeen`. Collected here rather than inside `archive`, because a
+        // list is the thing that can be written in one statement.
+        else seen.push(file.path);
       }
+
+      // Before `markMissing`, which is a `seen_pass < ?` sweep: anything not
+      // marked by now is about to be called gone.
+      this.repo.markSeen(seen, pass, at);
 
       const gone = this.repo.markMissing(pass, at);
       return ok(
@@ -96,22 +107,13 @@ export class TranscriptArchiveSource implements IngestSource {
 
     // Same size and same mtime: not opened at all. This is what makes a pass
     // over an unchanged corpus cost a stat per file rather than a read.
-    if (head && head.bytes === file.size && head.mtimeMs === file.mtimeMs) {
-      repo.touchSeen(file.path, pass, at);
-      return 0;
-    }
+    if (head && head.bytes === file.size && head.mtimeMs === file.mtimeMs) return 0;
 
     const plan = this.next(head, file.size);
-    if (plan === null) {
-      repo.touchSeen(file.path, pass, at);
-      return 0;
-    }
+    if (plan === null) return 0;
 
     const raw = await readRange(file.path, plan.from, file.size);
-    if (raw.length === 0) {
-      repo.touchSeen(file.path, pass, at);
-      return 0;
-    }
+    if (raw.length === 0) return 0;
 
     repo.saveChunk(
       {

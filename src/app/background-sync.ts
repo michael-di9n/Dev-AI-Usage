@@ -71,9 +71,51 @@ export function startBackgroundSync(): void {
   console.log(`[sync] importing every ${seconds}s.`);
 }
 
-/** Run one import pass, unless one is already running. */
+/**
+ * The shortest gap between passes, whoever asked for one.
+ *
+ * `sync()` has two kinds of caller and only one of them is a timer.
+ * `observabilityView` and `traceView` fire a pass on render, so that opening
+ * either page is what closes the gap between a session starting and this app
+ * knowing which project it belongs to.
+ *
+ * A render is not a page open, and that is what this floor is for. The
+ * Observability page re-renders on every `notifyLiveChange` - which a pass
+ * that wrote a row fires itself, below - so render-triggered passes fed
+ * themselves: refresh, sync, row, notify, refresh, as fast as the machine
+ * allowed, for as long as any session was writing a transcript. Which is
+ * exactly while someone is watching the page. The interval all this was meant
+ * to run at is 900 seconds.
+ *
+ * A floor rather than dropping the render-triggered call, because the gap it
+ * closes is real and nothing else closes it: the OTLP rows are already in the
+ * table and invisible only because no `session` row links them to a project
+ * yet, and only an import writes that row. Ten seconds still reads as
+ * "immediately" to someone who just opened the tab, and is long enough that a
+ * pass over an unchanged corpus is a rounding error against it.
+ */
+const SYNC_FLOOR_SECONDS = 10;
+
+/** When the last pass started. Zero means none has. */
+let lastPassAt = 0;
+
+/** Run one import pass, unless one is running or one ran a moment ago. */
 export function sync(): Promise<void> {
-  inFlight ??= runOnce().finally(() => { inFlight = null; });
+  if (inFlight) return inFlight;
+
+  // Off means off for this caller too, not only for the timer.
+  // `startBackgroundSync` honours the switch and this did not, and the direct
+  // callers bypass it entirely - so `ui-test --empty`, which points a server
+  // at a scratch database precisely so it can render the fresh-clone state,
+  // had every page render filling that database behind it. A switch that
+  // cannot actually stop the thing it names is worse than no switch.
+  if (app().config.syncSeconds <= 0) return Promise.resolve();
+
+  const now = Date.now();
+  if (now - lastPassAt < SYNC_FLOOR_SECONDS * 1000) return Promise.resolve();
+
+  lastPassAt = now;
+  inFlight = runOnce().finally(() => { inFlight = null; });
   return inFlight;
 }
 
@@ -115,4 +157,5 @@ export function stopBackgroundSync(): void {
   if (timer !== null) clearInterval(timer);
   timer = null;
   started = false;
+  lastPassAt = 0;
 }

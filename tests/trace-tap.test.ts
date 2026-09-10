@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   BANNER_ROWS,
   FILL_CEILING,
-  FILL_FLOOR,
   TAP_KINDS,
   banner,
   formatTapKinds,
   glitch,
+  linesFor,
   parseTapKinds,
+  TAP_LINES,
   tapCommand,
   tapLines,
   tapState,
@@ -48,6 +49,7 @@ const line = (over: Partial<TapLine> = {}): TapLine => ({
   session: "2dd3fbcc",
   attrs: [],
   more: 0,
+  detail: [],
   ...over,
 });
 
@@ -232,6 +234,177 @@ describe("tapState", () => {
   });
 });
 
+describe("the detail a row's count opens", () => {
+  /*
+   * The row is a tail: four attributes and a count of what did not fit. The
+   * count is a control, and these pin what it has to be able to show - the
+   * whole record, because a detail window that showed the same cut values as
+   * the row would be a second copy of the row.
+   */
+
+  it("carries the attributes the row printed and the ones it only counted", () => {
+    const [row] = tapLines([
+      record({ attrs: { tool_name: "Bash", model: "m", decision: "accept", cost_usd: "1", duration_ms: "2", extra: "3" } }),
+    ]);
+
+    expect(row!.attrs).toHaveLength(4);
+    expect(row!.more).toBe(2);
+
+    // Everything on the row is in here, and so is everything it counted: the
+    // six attributes, in the order the row ranked them, and then the session
+    // id the row only prints the first eight characters of.
+    const keys = row!.detail.map(([k]) => k);
+    expect(keys.slice(0, 4)).toEqual(row!.attrs.map(([k]) => k));
+    expect(keys.slice(0, 6).sort()).toEqual(
+      ["cost_usd", "decision", "duration_ms", "extra", "model", "tool_name"],
+    );
+    expect(keys.slice(6)).toEqual(["session_id"]);
+  });
+
+  /** The reason to open it at all. */
+  it("does not cut a value to the width of a line", () => {
+    const long = "x".repeat(400);
+    const [row] = tapLines([record({ attrs: { prompt: long } })]);
+
+    expect(row!.attrs[0]![1]).toContain("…");
+    expect(row!.attrs[0]![1].length).toBeLessThan(60);
+    expect(Object.fromEntries(row!.detail).prompt).toBe(long);
+  });
+
+  /** A value that arrived with newlines reads as the lines it was written in;
+   *  the row collapses them because a row eleven lines tall is not a row. */
+  it("keeps the newlines the row collapses", () => {
+    const [row] = tapLines([record({ attrs: { prompt: "first\nsecond" } })]);
+
+    expect(row!.attrs[0]![1]).toBe("first second");
+    expect(Object.fromEntries(row!.detail).prompt).toBe("first\nsecond");
+  });
+
+  /**
+   * The attributes the row drops for being identical on every record - the
+   * machine, the account, the correlation ids. They are exactly what a reader
+   * opening one record wants and exactly what forty rows of them say nothing
+   * about, so they belong here and nowhere else.
+   */
+  it("carries the constants the row drops", () => {
+    const [row] = tapLines([
+      record({ attrs: { tool_name: "Bash", "host.arch": "x86", "user.id": "u1" } }),
+    ]);
+
+    expect(row!.attrs.map(([k]) => k)).not.toContain("host.arch");
+    expect(Object.fromEntries(row!.detail)["host.arch"]).toBe("x86");
+    expect(Object.fromEntries(row!.detail)["user.id"]).toBe("u1");
+  });
+
+  /** The row prints the first eight characters; correlating against anything
+   *  else needs the whole thing, and this is the only place it appears. */
+  it("carries the session id unshortened", () => {
+    const [row] = tapLines([record()]);
+
+    expect(row!.session).toBe("2dd3fbcc");
+    expect(Object.fromEntries(row!.detail).session_id)
+      .toBe("2dd3fbcc-9f21-4a1e-b0f1-0c9a77f2e311");
+  });
+
+  /** A record whose attrs also carry `session_id` must not print it twice. */
+  it("names every attribute once", () => {
+    const [row] = tapLines([
+      record({ attrs: { session_id: "2dd3fbcc-9f21-4a1e-b0f1-0c9a77f2e311", tool_name: "Bash" } }),
+    ]);
+
+    const keys = row!.detail.map(([k]) => k);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  /** No count on the row is not nothing to show - it is a whole record that
+   *  happened to fit, plus the constants and the full session id. */
+  it("is still the whole record when the row fitted everything", () => {
+    const [row] = tapLines([record({ attrs: { tool_name: "Bash" } })]);
+
+    expect(row!.more).toBe(0);
+    expect(Object.fromEntries(row!.detail).tool_name).toBe("Bash");
+    expect(Object.fromEntries(row!.detail).session_id).toContain("2dd3fbcc");
+  });
+
+  /** A metric point's value and a span's measured duration are columns rather
+   *  than attributes, and they outrank the bag on the row - so they lead here
+   *  too, or the window would disagree with the row about what matters. */
+  it("keeps the row's order for what the row showed", () => {
+    const [row] = tapLines([
+      record({ kind: "metric", value: 12, attrs: { model: "m", "host.arch": "x86" } }),
+    ]);
+
+    expect(row!.detail[0]![0]).toBe("value");
+    // The constants come after everything the row would have ranked.
+    expect(row!.detail.at(-1)![0]).toBe("host.arch");
+  });
+});
+
+describe("linesFor", () => {
+  /*
+   * The narrowing that lets a switch move the log without a round trip. It is
+   * given every stream's own window and hands back the switched-on ones,
+   * which is the same set the query would have returned for that selection.
+   */
+  const at = (kind: "log" | "metric" | "span", n: number) =>
+    line({ kind, name: `${kind}-${n}`, at: String(n).padStart(2, "0") });
+
+  /**
+   * The whole reason the page reads every stream rather than the newest forty
+   * overall. Ten spans have arrived on this machine against twelve thousand
+   * events, so the newest forty records contain no span at all - narrowing
+   * *those* would show a working spans stream as empty, and `tapState` would
+   * then call a live receiver quiet. This is the case that catches it.
+   */
+  it("returns a stream's own rows, not just the ones that were newest overall", () => {
+    const lines = [
+      ...Array.from({ length: 40 }, (_, i) => at("log", 100 - i)),
+      at("span", 1),
+    ];
+
+    expect(linesFor(lines, ["span"])).toEqual([at("span", 1)]);
+  });
+
+  it("keeps every switched-on stream and drops the rest", () => {
+    const lines = [at("log", 3), at("metric", 2), at("span", 1)];
+
+    expect(linesFor(lines, ["log", "span"]).map((l) => l.kind)).toEqual(["log", "span"]);
+  });
+
+  it("narrowing to every stream is the window itself", () => {
+    const lines = Array.from({ length: 10 }, (_, i) => at("log", 10 - i));
+
+    expect(linesFor(lines, TAP_KINDS)).toEqual(lines);
+  });
+
+  /** A window, not an archive - the same bound the query is given. */
+  it("never returns more than the window holds", () => {
+    const lines = Array.from({ length: TAP_LINES * 3 }, (_, i) => at("log", i));
+
+    expect(linesFor(lines, ["log"])).toHaveLength(TAP_LINES);
+  });
+
+  it("keeps the order it was given, which is newest first", () => {
+    const lines = [at("log", 9), at("metric", 8), at("log", 7)];
+
+    expect(linesFor(lines, ["log", "metric"]).map((l) => l.name))
+      .toEqual(["log-9", "metric-8", "log-7"]);
+  });
+
+  /**
+   * The two halves meeting: a reader who switches to spans alone before a
+   * span has arrived must be told the stream is quiet, not that the receiver
+   * is dead - the tally beside it is counting events.
+   */
+  it("leaves tapState able to tell a quiet stream from a dead receiver", () => {
+    const heard = { events: 12_000, metrics: 0, spans: 0 };
+    const lines = [at("log", 1)];
+
+    expect(tapState(heard, linesFor(lines, ["span"]))).toBe("quiet");
+    expect(tapState(heard, linesFor(lines, ["log"]))).toBe("lines");
+  });
+});
+
 describe("the switches", () => {
   it("read every stream when nothing is stored, or nonsense is", () => {
     expect(parseTapKinds(null)).toEqual([...TAP_KINDS]);
@@ -317,24 +490,21 @@ describe("glitch", () => {
 });
 
 describe("waterFill", () => {
-  it("never lets a set vessel read emptier than the murk in an unset one", () => {
-    // The murk sits at 30% (`.rp-node` in globals.css). A set vessel that has
-    // heard nothing yet is a working setting waiting for the next session, and
-    // it used to draw as a hairline - lower than a broken node.
-    expect(FILL_FLOOR).toBeGreaterThan(30);
-    expect(waterFill(0)).toBe(FILL_FLOOR);
-    expect(waterFill(1)).toBeGreaterThanOrEqual(FILL_FLOOR);
+  /* One point per hundred records, and nothing on top of it. The reading is
+     meant to be arithmetic a reader can do off the tally beside it. */
+
+  it("is one point per hundred records", () => {
+    expect(waterFill(0)).toBe(1);
+    expect(waterFill(100)).toBe(2);
+    expect(waterFill(1_000)).toBe(11);
+    expect(waterFill(5_000)).toBe(51);
   });
 
-  it("climbs by the order of magnitude, not by the count", () => {
-    expect(waterFill(100)).toBe(58);
-    expect(waterFill(1_000)).toBe(67);
-    // Each decade is worth the same nine points: ten to a hundred moves the
-    // water as far as a hundred to a thousand, and a hundred more records on
-    // top of three hundred barely move it - which is what a reader comparing
-    // two vessels by eye can and cannot tell apart.
-    expect(waterFill(100) - waterFill(10)).toBe(waterFill(1_000) - waterFill(100));
-    expect(waterFill(400) - waterFill(300)).toBeLessThanOrEqual(1);
+  it("moves by the count, not by the order of magnitude", () => {
+    // The thing the logarithmic version could not do: the same hundred
+    // records move the water the same distance wherever it already is.
+    expect(waterFill(400) - waterFill(300)).toBe(1);
+    expect(waterFill(5_400) - waterFill(5_300)).toBe(1);
   });
 
   it("never goes down as the count goes up", () => {
@@ -345,11 +515,31 @@ describe("waterFill", () => {
     }
   });
 
-  it("caps where the crest still fits inside the vessel", () => {
-    // `.rp-node.met` says the crest clips above 76%; a fill that said 80 would
-    // be one the stylesheet cannot draw.
-    expect(FILL_CEILING).toBe(76);
-    expect(waterFill(9_999)).toBe(FILL_CEILING);
+  it("caps at 80", () => {
+    expect(FILL_CEILING).toBe(80);
+    expect(waterFill(7_900)).toBe(FILL_CEILING);
     expect(waterFill(1_000_000)).toBe(FILL_CEILING);
+  });
+
+  /**
+   * Pinned because it is a deliberate trade and not an oversight.
+   *
+   * An unset vessel's murk is 30% and a wrong one is 40% (`globals.css`), so
+   * a set vessel with a few hundred records on it draws emptier than a broken
+   * one. That was the reason this rule was replaced once; it is back because
+   * a water level that means "about this many records" is worth more here
+   * than one that is always above the murk. The tag under every node says the
+   * state in words, which is what stops the drawing being the only channel.
+   *
+   * If this ever has to read right at a glance, move the murk down - do not
+   * put a floor back on the arithmetic.
+   */
+  it("reads below the murk at the counts this machine actually has", () => {
+    expect(waterFill(266)).toBeLessThan(30);
+    expect(waterFill(2_800)).toBeLessThan(30);
+    // 2,900 records is where a working vessel finally draws level with an
+    // unset one, and 3,900 with a broken one.
+    expect(waterFill(2_900)).toBe(30);
+    expect(waterFill(3_900)).toBe(40);
   });
 });

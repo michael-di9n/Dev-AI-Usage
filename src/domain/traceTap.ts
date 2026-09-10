@@ -96,6 +96,16 @@ export interface TapLine {
   attrs: [string, string][];
   /** Attributes that did not fit. Counted rather than dropped in silence. */
   more: number;
+  /**
+   * The whole record, for the window the count opens.
+   *
+   * Everything `attrs` shows, then everything `more` counted, then the
+   * attributes the row drops for being the same on every record - the machine,
+   * the account, the correlation ids - and the unshortened session id. Values
+   * are whole here: the row collapses newlines and cuts at `VALUE_CHARS`, and
+   * a detail window that did the same would be a second copy of the row.
+   */
+  detail: [string, string][];
 }
 
 /**
@@ -120,8 +130,15 @@ export interface Heard {
 /** The whole of what the window draws: the tally, the switches, and the lines. */
 export interface TraceTap {
   heard: Heard;
-  /** Which streams the lines were read from. A stored choice - see `parseTapKinds`. */
+  /** Which streams are switched on. A stored choice - see `parseTapKinds`. */
   kinds: TapKind[];
+  /**
+   * Every stream's own newest `TAP_LINES`, merged newest-first - not the
+   * newest `TAP_LINES` overall, and not only the switched-on ones. The window
+   * narrows this with `linesFor` as the reader flips a switch, which is what
+   * lets that happen without a round trip; both of those doc comments explain
+   * why it has to be every stream's window and not a merged forty.
+   */
   lines: TapLine[];
 }
 
@@ -131,38 +148,47 @@ export const TAP_LINES = 40;
 /**
  * How full a vessel reads, given the count backing it.
  *
- * Two rules, and the first is the one that matters: a vessel that is set
- * never reads emptier than one that is not. The murk in an unset vessel sits
- * at 30% (`.rp-node` in globals.css), so a set vessel starts at 40% - with
- * nothing yet received it still shows a surface, because "set, and waiting for
- * the next session to start" is a state this page has to draw every day and
- * the previous rule drew it as a hairline. One point per hundred records was
- * honest arithmetic and it put every working node on this machine at 1%,
- * lower than a broken one.
+ * One point per hundred records, which is the arithmetic a reader can do in
+ * their head off the tally beside it: a vessel at 12% has heard about eleven
+ * hundred, and two vessels differing by a tenth of the glass differ by a
+ * thousand records. Nothing is scaled, curved or floored on the way to the
+ * screen.
  *
- * Above the floor it climbs with the order of magnitude, not the count: a
- * reader comparing two vessels by eye can tell ten from a thousand and cannot
- * tell three hundred from four hundred, so decades are the honest scale.
- * 40% at nothing, 58% at a hundred, 67% at a thousand, and the cap of 76% from
- * ten thousand up - which is the ceiling `.rp-node.met` sets, because the
- * crest hangs 7px above the water line and clips at anything higher.
+ * It was briefly logarithmic, on the argument that a reader can tell ten from
+ * a thousand by eye and cannot tell three hundred from four hundred - which is
+ * true, and bought discrimination at the low end at the price of the water
+ * level no longer meaning anything a reader could name. This is the other
+ * trade and it is the one this page takes: the number is the number.
+ *
+ * Two things it deliberately does not do, both of which the logarithmic
+ * version did:
+ *
+ * It does not floor. A set vessel with nothing yet received reads 1%, which is
+ * below the 30% murk of an unset one (`.rp-node`) and the 40% of a wrong one
+ * (`.rp-node.wrong`), so on a machine whose nodes are in the hundreds a
+ * working node draws emptier than a broken one. The tag under every node says
+ * the state in words and colour is never the only channel, which is what this
+ * leans on; if the reading ever has to be right at a glance, the murk is the
+ * number to move, not this.
+ *
+ * It caps at 80 rather than at the 76 the crest fits inside, so a vessel over
+ * eight thousand records clips its crest against the rim - flat at the top,
+ * which is the one state that most wants a surface.
  *
  * Shared by both termini and every "met" node in the pipe (`Receipt.count`,
  * which is metrics for the metrics node, spans for the spans node, and so on)
- * - one formula, whatever the count means. The termini clamp it from below
- * in the stylesheet (`.rp-end.on .rp-water`), because a word sits in the
- * middle of those two and has to stay under the water line.
+ * - one formula, whatever the count means. The termini clamp it from below in
+ * the stylesheet (`.rp-end.on .rp-water`) at 64%, because a word sits in the
+ * middle of those two and has to stay under the water line - so a terminus
+ * reads 64% until its count passes about six thousand.
  */
 export function waterFill(count: number): number {
-  const decades = Math.log10(Math.max(0, count) + 1) / 4;
-  return FILL_FLOOR + Math.round(Math.min(1, decades) * (FILL_CEILING - FILL_FLOOR));
+  return Math.min(FILL_CEILING, 1 + Math.floor(Math.max(0, count) / 100));
 }
 
-/** A set vessel's dregs: above the 30% murk of an unset one, below the word in a terminus. */
-export const FILL_FLOOR = 40;
-
-/** Where the crest still fits inside the vessel - see `.rp-node.met`. */
-export const FILL_CEILING = 76;
+/** Where the arithmetic stops. Above `.rp-node.met`'s drawable 76%, so the
+ *  crest clips against the rim from about eight thousand records up. */
+export const FILL_CEILING = 80;
 
 /**
  * Four per row, and a count of the rest.
@@ -229,8 +255,11 @@ const FIRST = [
  * the log said nothing at all. Measured, not guessed: that is what the first
  * draft of this window looked like.
  *
- * Nothing is hidden by it. What is dropped is counted in `more`; the Trace
- * page draws the transcript's own copy of what was said and run.
+ * Nothing is hidden by it, and that is now literally rather than nearly true.
+ * What is dropped for not fitting is counted in `more`, and the count opens
+ * `detail`, which carries these as well - so every attribute that arrived is
+ * one click from the row it arrived on. The Trace page draws the transcript's
+ * own copy of what was said and run.
  */
 const CONSTANT_NAMESPACES = [
   "host.",
@@ -261,20 +290,38 @@ const DASH = "—";
 export function tapLines(records: TapRecord[]): TapLine[] {
   return records.map((record) => {
     const own = ownPairs(record);
+    const named = (key: string) => own.some(([mine]) => mine === key);
     const fromAttrs = Object.entries(record.attrs).filter(
-      ([key]) => !constant(key) && !own.some(([mine]) => mine === key),
+      ([key]) => !constant(key) && !named(key),
     );
-    const pairs = prioritise([...own, ...fromAttrs]).map(
-      ([key, value]) => [key, printable(value)] as [string, string],
-    );
+    const shown = prioritise([...own, ...fromAttrs]);
+
+    /*
+     * The rest of the record, kept for the detail window rather than thrown
+     * away: the attributes every record carries identically, which the row
+     * drops because printing the same machine name on forty rows says nothing,
+     * and the session id in full - the row prints the first eight characters,
+     * and the whole thing is what a reader correlating against another tool
+     * needs. A Map because these three lists can name the same key: a record
+     * whose attrs carry `session_id` would otherwise print it twice.
+     */
+    const identity: [string, unknown][] =
+      record.sessionId === null ? [] : [["session_id", record.sessionId]];
+    const same = Object.entries(record.attrs).filter(([key]) => constant(key) && !named(key));
+
+    const detail = new Map<string, string>();
+    for (const [key, value] of [...shown, ...identity, ...same]) detail.set(key, whole(value));
 
     return {
       kind: record.kind,
       at: clockOf(record.ts),
       name: record.name,
       session: record.sessionId === null ? null : record.sessionId.slice(0, 8),
-      attrs: pairs.slice(0, ATTRS_PER_LINE),
-      more: Math.max(0, pairs.length - ATTRS_PER_LINE),
+      attrs: shown
+        .slice(0, ATTRS_PER_LINE)
+        .map(([key, value]) => [key, printable(value)] as [string, string]),
+      more: Math.max(0, shown.length - ATTRS_PER_LINE),
+      detail: [...detail],
     };
   });
 }
@@ -324,6 +371,16 @@ function printable(value: unknown): string {
   const flat = String(value).replace(/\s+/g, " ").trim();
   return flat.length > VALUE_CHARS ? `${flat.slice(0, VALUE_CHARS - 1)}…` : flat;
 }
+
+/**
+ * One attribute value, whole.
+ *
+ * Neither collapsed nor cut, which is the only reason the detail window is
+ * worth opening: a value that arrived with newlines in it reads as the lines
+ * it was written in, and the count in the row is honest about there being
+ * more to see rather than being the whole of it.
+ */
+const whole = (value: unknown): string => String(value);
 
 /**
  * `2026-09-08T04:12:33.481Z` -> `14:12:33` on a UTC+10 machine.
@@ -412,6 +469,35 @@ export function tapState(
 ): TapState {
   if (lines.length > 0) return "lines";
   return heard.events + heard.metrics + heard.spans > 0 ? "quiet" : "dark";
+}
+
+/**
+ * The rows the window draws: the switched-on streams, newest first.
+ *
+ * The narrowing is here rather than in the query because the switches are a
+ * client control now. Flipping one has to change the log in the same frame,
+ * and a server round trip cannot - it used to be three forms posting to a
+ * server action that re-rendered the whole page, which made a filter button
+ * cost what a navigation costs.
+ *
+ * Exactly the query's answer, not an approximation of it. `otelRecentRecords`
+ * returns the newest `limit` of each stream asked for, then the newest `limit`
+ * of that union; given every stream's own window - which is what
+ * `observabilityView` now reads - this computes the same set for any subset.
+ *
+ * The trap it is written against: narrowing the newest forty records *overall*
+ * would show a reader with ten spans and twelve thousand events an empty spans
+ * stream, and `tapState` would then call a working receiver quiet. Which is
+ * why the caller must pass every stream's window and not a merged forty.
+ *
+ * `filter` preserves order, so the ts-descending merge upstream survives.
+ */
+export function linesFor(
+  lines: readonly TapLine[],
+  kinds: readonly TapKind[],
+  limit: number = TAP_LINES,
+): TapLine[] {
+  return lines.filter((line) => kinds.includes(line.kind)).slice(0, limit);
 }
 
 // ---------------------------------------------------------------------------

@@ -28,7 +28,7 @@ const THEMED_TOKENS = [
   "--ok-fg", "--ok-bg", "--busy-fg", "--busy-bg",
   "--warn-fg", "--warn-bg", "--high-fg", "--high-bg",
   "--gold-fg", "--gold-bg", "--silver-fg", "--silver-bg",
-  "--bronze-fg", "--bronze-bg", "--murk",
+  "--bronze-fg", "--bronze-bg", "--murk", "--tap-water",
   "--coin", "--coin-edge", "--coin-line",
   "--term-bg", "--term-line", "--term-fg", "--term-dim", "--term-key",
   "--term-metric", "--term-span",
