@@ -177,7 +177,22 @@ export function TraceRunList({
                       */
                       title={`${session.sessionId} — ${session.blocks.toLocaleString()} rows, ${cost.measured} cost, ${tools.measured} tool calls`}
                     >
-                      <span className="run-id">{session.sessionId.slice(0, 8)}</span>
+                      <span className="run-id">
+                        {session.sessionId.slice(0, 8)}
+                        {/*
+                          Whether this run has spans - the fact the OTEL-only
+                          switch filters on, shown on the row so a reader can
+                          see which runs it would keep before flipping it. A
+                          glyph and a hidden word, never the glyph alone.
+                        */}
+                        <i
+                          className={session.otelSpans > 0 ? "run-spans on" : "run-spans"}
+                          title={session.otelSpans > 0 ? `${session.otelSpans.toLocaleString()} OTEL span${session.otelSpans === 1 ? "" : "s"}` : "No OTEL spans"}
+                        >
+                          <span aria-hidden="true">{session.otelSpans > 0 ? "◆" : "◇"}</span>
+                          <span className="vh">{session.otelSpans > 0 ? `, ${session.otelSpans.toLocaleString()} spans` : ", no spans"}</span>
+                        </i>
+                      </span>
                       <span className="run-when">{when(session)}</span>
 
                       {/* Figure and marks in one cell, the figure first. The

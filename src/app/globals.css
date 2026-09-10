@@ -73,6 +73,17 @@
   --term-fg: light-dark(#dbe7dd, #cfe0d2);
   --term-dim: light-dark(#8ba396, #7f978a);
   --term-key: light-dark(#7ede9a, #6ccd88);
+  /*
+   * Two more inks for the trace-tap, one per stream that is not the log. The
+   * log keeps the key green it always had; metric points are amber and spans
+   * are sky, and both are measured against --term-bg the way the key is -
+   * tests/styles.test.ts holds them to the same text floor. Three hues a
+   * greyscale screenshot can still tell apart by lightness, and none of them
+   * is a verdict: they say which table a row came out of and nothing else,
+   * which is the only meaning a colour is allowed to carry on this page.
+   */
+  --term-metric: light-dark(#e6bd6e, #dcb060);
+  --term-span: light-dark(#86c9f2, #7fc0ea);
   /* The coin stack. A graphic rather than text, so the floor is the 3:1
      non-text one - but all three clear it against --panel in both modes
      (3.3-12.5:1), because a stack you have to squint at cannot be counted,
@@ -1303,10 +1314,12 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
  * 18px a node could only be a filled dot or an empty one, and the state had to
  * live in a tooltip that touch cannot open and a screenshot does not keep.
  *
- * `--fill` is how high the water sits. Set is 86% rather than 100% because a
- * circle brimmed to the rim has no surface, and the surface is where the wave
- * is. Colour is never the only channel: the tag under every node says the
- * state in words.
+ * `--fill` is how high the water sits. The stylesheet's own values are the
+ * fallbacks - murk for unset, 76% for set, 40% for a wrong value - and every
+ * set vessel overrides the 76% with `waterFill` in `domain/traceTap.ts`, which
+ * reads off how much has actually arrived. Never 100%: a circle brimmed to the
+ * rim has no surface, and the surface is where the wave is. Colour is never
+ * the only channel: the tag under every node says the state in words.
  */
 .rp-node {
   --fill: 30%;
@@ -1403,6 +1416,17 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
 /* The dregs stop a third of the way up, which is what keeps the word above
    the water line and on the panel where it was measured. */
 .rp-end.on { --fill: 78%; --water: var(--accent); border-style: solid; border-color: var(--accent); }
+/*
+ * On, the word has to be wholly under the water line, because it is painted
+ * in the panel's colour and reads against the water. `waterFill` starts at
+ * 40% for a vessel with nothing yet received, which on a requirement is right
+ * and on a terminus would put the water line through the middle of the word
+ * - white on white above it. The word spans roughly 42-58% of the vessel and
+ * the crest hangs a few pixels above the line, so 64% is the least water that
+ * keeps the whole word wet; above that the count shows through as it does
+ * everywhere else, up to the same 76% ceiling.
+ */
+.rp-end.on .rp-water { height: max(var(--fill), 64%); }
 .rp-end-word {
   position: relative;
   font-size: 13px;
@@ -1412,8 +1436,13 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
   color: var(--muted);
 }
 /* On the water rather than under it: --panel is the page's own light surface
-   and reads at 12:1 against the accent, which no token pair here beats. */
-.rp-end.on .rp-end-word { color: var(--panel); }
+   and reads at 12:1 against the accent, which no token pair here beats.
+   The word paints that water behind itself as well. Visually nothing: it is
+   accent on accent, wholly submerged (see `.rp-end.on .rp-water`). It is for
+   the contrast probe in src/ui-testing, which finds a text's background by
+   walking up its ancestors and cannot see a sibling span of water - without
+   this it measured the word against the panel and reported 1:1. */
+.rp-end.on .rp-end-word { color: var(--panel); background: var(--accent); padding: 0 3px; border-radius: 3px; }
 
 
 @media (prefers-reduced-motion: no-preference) {
@@ -2380,6 +2409,14 @@ button.btn:not(.primary):hover { background: var(--line-soft); border-color: var
 }
 .trace-more .note { margin: 0; }
 .trace-more-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+/* The empty pane's buttons sit under its two sentences, not beside them. */
+.trace-empty .trace-more-acts { margin-top: 12px; }
+.trace-empty .guide-p b { color: var(--text); }
+/* The span mark beside a run id: lit when the run has spans, an outline when
+   it has none. The same glyph pair the OTEL-only switch uses, so the row and
+   the filter that reads it agree. */
+.run-spans { font-style: normal; margin-left: 6px; font-size: 11px; color: var(--muted); opacity: 0.6; }
+.run-spans.on { color: var(--accent-strong); opacity: 1; }
 
 
 .term-panel .tr { border-left-color: var(--term-line); }
@@ -4050,7 +4087,68 @@ button.rp-end:hover { border-color: var(--accent-strong); }
 }
 .mon-out .term-ts { color: var(--term-dim); }
 .mon-sid { flex: none; color: var(--term-dim); opacity: 0.75; }
-.mon-out .term-name { color: var(--term-key); }
+/*
+ * Which stream a row came down, as a word and then as a colour - in that
+ * order, because the word is the channel a greyscale screenshot and a
+ * colour-blind reader both keep. The row's name takes the same ink so the eye
+ * can sweep a column of names and see the streams interleave; the attributes
+ * stay in the terminal's plain foreground whatever the stream, or a metric
+ * row's `value=` would be amber on amber.
+ *
+ * `--kind-ink` is set once per stream on the row and read by the two things
+ * that wear it, so a fourth stream is one more line here and nothing else.
+ */
+.term-kind {
+  flex: none;
+  min-width: 4.5ch;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kind-ink, var(--term-dim));
+}
+.term-line[data-kind="log"], .mon-kind[data-kind="log"] { --kind-ink: var(--term-key); }
+.term-line[data-kind="metric"], .mon-kind[data-kind="metric"] { --kind-ink: var(--term-metric); }
+.term-line[data-kind="span"], .mon-kind[data-kind="span"] { --kind-ink: var(--term-span); }
+.mon-out .term-name { color: var(--kind-ink, var(--term-key)); }
+
+/*
+ * The stream switches, under the title bar. A lamp, a word, and a pressed
+ * state - the same three things the annunciator strip on Setup uses, because
+ * a switch that only changed colour would be a switch with one channel. Off
+ * is dim rather than dark: the reader has to be able to find the switch they
+ * turned off in order to turn it back on.
+ */
+.mon-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.mon-kinds form { display: contents; }
+.mon-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid var(--term-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--term-dim);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.mon-kind i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--term-dim);
+  opacity: 0.45;
+}
+.mon-kind .term-kind { color: inherit; min-width: 0; }
+.mon-kind[aria-pressed="true"] { color: var(--kind-ink); border-color: var(--kind-ink); }
+.mon-kind[aria-pressed="true"] i { background: var(--kind-ink); opacity: 1; box-shadow: 0 0 6px var(--kind-ink); }
+.mon-kind:hover:not(:disabled) { background: rgb(255 255 255 / 0.05); }
+.mon-kind:focus-visible { outline: 2px solid var(--term-key); outline-offset: 2px; }
+/* The last stream on. Still lit - it is on - but not a control right now, and
+   the title says why. */
+.mon-kind:disabled { cursor: default; opacity: 0.85; }
 /* Free to run past the edge of the box: `.term-attrs` clips with an ellipsis
    where it is used on a page, and here the row is allowed to be as long as it
    is and the box scrolls to it. */

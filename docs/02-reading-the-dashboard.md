@@ -286,13 +286,21 @@ first requirement it is missing.
 to settings advice: clicking `Trace` opens a terminal onto the receiver — how
 many events, metric points and spans have arrived, from how many sessions, when
 the last one was heard, and then the last forty records with their attributes,
-newest first. The attributes that are the same on every record — the machine,
-the account, the correlation ids — are dropped so the four printed per row are
-the ones about the work, and anything cut is counted at the end of the row
-rather than dropped in silence. If nothing has ever arrived it says so as a
-sign, and names the variable that would fill it; if something has arrived but no
-events have, it says that instead, because a receiver holding forty thousand
-metric points is not a receiver that has heard nothing.
+newest first. Every record is a line, whichever of the three streams it came
+down, and each line says which in a word — `log`, `metric`, `span` — and then in
+a colour: green, amber, sky. The colour means which table the row came out of
+and nothing else. Three switches under the title bar turn a stream off and on,
+because a metric export lands ten to thirty points at once and would otherwise
+drown the events; the choice is remembered, and the last stream on cannot be
+switched off. The attributes that are the same on every record — the machine,
+the account, the correlation ids — are dropped, and the ones a reader turned a
+setting on to see — the prompt, the reply, `tool_parameters`, `tool_input` —
+are printed first, so the four per row are the ones about the work. Anything
+cut is counted at the end of the row rather than dropped in silence. If nothing
+has ever arrived it says so as a sign, and names the variable that would fill
+it; if something has arrived but nothing on the streams switched on, it says
+that instead and names the streams that are off, because a receiver holding
+forty thousand metric points is not a receiver that has heard nothing.
 
 **What your settings say and what the receiver has heard are two questions, and
 the page answers both — separately.** The last line of a node's panel counts
@@ -321,11 +329,14 @@ and a pipe that dried up at the first unset one would say they did.
 
 **Its terminus is the whole of what turning them on influences.** `Words` reads
 `text arrives` once tier 1 is complete and at least one of the four is set —
-either alone sends nothing — and `text stays redacted` otherwise. That is one
-rule rather than four: `OTEL_LOG_TOOL_DETAILS` and `OTEL_LOG_TOOL_CONTENT` ride
-on span events and so need tier 2 as well, which the terminus says in words
-instead of encoding in the fill. Nothing else on the page moves: no band, no
-tier count, no figure anywhere in the app. On
+either alone sends nothing — and `text stays redacted` otherwise. Each of the
+four vouches for itself with the attribute it adds: `prompt` and `response` on
+the two text events, `tool_parameters` on tool events for
+`OTEL_LOG_TOOL_DETAILS`, `tool_input` and `tool_output` on tool events for
+`OTEL_LOG_TOOL_CONTENT`. Those two are also carried on span events, which this
+receiver does not read, so their counts can only ever be low, never high.
+Nothing else on the page moves: no band, no tier count, no figure anywhere in
+the app. On
 this machine the four are redundant, because the transcript already holds every
 prompt, reply and tool argument in full and these copy a 60 KB-capped subset
 into a second store nothing here reads. Pointed at an agent on another machine
@@ -343,6 +354,17 @@ The hook is the one vessel with no line to quote, since it is a command with a
 matcher, so it names its settings key instead. None of it is the only place
 anything is said: the two words under each vessel carry the name and the state,
 and the panel carries the file, the line and what has arrived.
+
+**A set vessel fills by how much has arrived, and never below the murk.** Every
+vessel that is set, and both termini, read their water line off one rule: 40%
+with nothing yet received — set, and waiting for the next session to start —
+climbing by the order of magnitude to 76% at ten thousand records, where the
+crest still fits inside the circle. By decades rather than by count, because a
+reader comparing two vessels by eye can tell ten from a thousand and cannot tell
+three hundred from four hundred. The rule is one function, so Args and Output
+sit at the same rule as Prompts and Replies beside them; two of the four used to
+have no count behind them and took the stylesheet's flat fill instead, which
+drew the two vessels with the least evidence as the two brimming ones.
 
 **A vessel the water has not reached holds murk, not nothing.** Dead water, a
 near-neutral slate, a fifth to a third of the way up, sloshing at a quarter of

@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import { costSplit, type CostSplit, type ModelUsageRow } from "../domain/costSplit";
 import { DEFAULT_BANDS, parseBands, type RunBands } from "../domain/runBands";
 import { DEFAULT_ORDER, parseOrder, sortRuns, type RunOrder } from "../domain/runOrder";
-import { NO_RANGE, describeRange, parseRange, runsInRange, type DateRange } from "../domain/traceDates";
+import { NO_RANGE, describeRange, isFiltered, parseRange, runsInRange, type DateRange } from "../domain/traceDates";
 import { buildPath, freshSteps, pathStepsOf, type TracePath } from "../domain/tracePath";
 import { buildTrace, type TraceTree, capTree, traceRowsOf } from "../domain/traceTree";
 import type { SessionUsageRow, TraceableSession } from "../db/QueryRepository";
@@ -103,6 +103,18 @@ export interface TraceView {
   /** Whether the list is narrowed to runs with at least one OTEL span. */
   otelOnly: boolean;
   /**
+   * What each filter is holding back, for the pane that has nothing to draw.
+   *
+   * `dates` is how many runs the list would show with the date filter
+   * cleared; `otel` how many with the span filter off. Each is null when that
+   * filter is not in force, so the pane offers only the filters that are
+   * actually hiding something. Both are counts of what the reader would get,
+   * not of what is hidden, because the button they sit on is the one that
+   * shows them - and a button that says what it will produce is one the
+   * reader can decide about.
+   */
+  widen: { dates: number | null; otel: number | null };
+  /**
    * Set when a stored choice no longer resolves. A sentence naming what
    * happened, never an empty page.
    */
@@ -179,6 +191,7 @@ export function traceView(now: Date = new Date()): TraceView {
       range: NO_RANGE, total: 0, cost: null, problem: null,
       order: DEFAULT_ORDER, bands: DEFAULT_BANDS, runsOpen: true,
       otelOnly: queries.readState(TRACE_OTEL_ONLY) === "true",
+      widen: { dates: null, otel: null },
       nothingCaptured: queries.traceBlockCount() === 0,
     };
   }
@@ -234,6 +247,16 @@ export function traceView(now: Date = new Date()): TraceView {
     // touched the control, and the list is the page's index.
     runsOpen: queries.readState(TRACE_RUNS_OPEN) !== "false",
     otelOnly,
+    /*
+     * What each filter alone is holding back. The date count is taken after
+     * the span filter and the span count after the date filter, so each says
+     * what ONE click on its button would produce with the other filter left
+     * as it is - which is the question a reader facing an empty pane asks.
+     */
+    widen: {
+      dates: isFiltered(range) ? mine.length : null,
+      otel: otelOnly ? runsInRange(byProject, range).length : null,
+    },
     nothingCaptured: false,
   };
 

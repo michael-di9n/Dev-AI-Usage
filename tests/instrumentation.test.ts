@@ -366,14 +366,35 @@ describe("the ladder", () => {
 
   it("reports nothing received as a measured zero, never as a gap", () => {
     // The receiver runs in this process and the database is open, so "none"
-    // is an answer. The house rule cuts the other way here.
-    const cells = requirementCells(scanOf(FULL_ENV));
+    // is an answer. The house rule cuts the other way here. The content
+    // branch is held to it too: two of its vessels had no receipt for a
+    // while, and with no receipt `Stop` writes no fill, so the two vessels
+    // with the least evidence behind them were the two drawn brimming.
+    const cells = [...requirementCells(scanOf(FULL_ENV)), ...contentCells(scanOf(FULL_ENV))];
     for (const cell of cells) {
       const receipt = receiptFor(cell, NOTHING_RECEIVED);
       expect(receipt, cell.key).not.toBeNull();
       expect(receipt!.receiving).toBe(false);
       expect(receipt!.detail).toMatch(/^0 /);
     }
+  });
+
+  it("vouches for the two tool settings with the attributes they add", () => {
+    // Named for the attribute rather than the setting, so a reader can check
+    // the count against the tap: the rows there print `tool_parameters=` and
+    // `tool_input=` in the same words.
+    const content = contentCells(scanOf({ ...FULL_ENV, OTEL_LOG_TOOL_DETAILS: "1", OTEL_LOG_TOOL_CONTENT: "1" }));
+    const live = { ...NOTHING_RECEIVED, toolEventsWithArgs: 2, toolEventsWithContent: 4 };
+
+    const args = receiptFor(cellFor(content, "OTEL_LOG_TOOL_DETAILS"), live)!;
+    expect(args).toMatchObject({ receiving: true, count: 2 });
+    expect(args.detail).toBe("2 tool events carrying tool_parameters received");
+
+    const output = receiptFor(cellFor(content, "OTEL_LOG_TOOL_CONTENT"), live)!;
+    expect(output).toMatchObject({ receiving: true, count: 4 });
+    expect(output.detail).toContain("tool_input or tool_output");
+    // Prompt text arriving proves nothing about tool arguments.
+    expect(receiptFor(cellFor(content, "OTEL_LOG_TOOL_DETAILS"), { ...NOTHING_RECEIVED, promptsWithText: 9 })!.receiving).toBe(false);
   });
 });
 
@@ -390,6 +411,8 @@ const NOTHING_RECEIVED = {
   timedToolCalls: 0,
   promptsWithText: 0,
   repliesWithText: 0,
+  toolEventsWithArgs: 0,
+  toolEventsWithContent: 0,
 };
 
 describe("one requirement, read against a scan", () => {

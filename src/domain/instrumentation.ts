@@ -476,11 +476,13 @@ export const CONTENT_SETTINGS: Requirement[] = [
     tier: null,
     label: "Tool output",
     short: "Output",
-    what: "What each tool returned. Rides on spans, so it needs the run above finished.",
+    what: "What each tool was given and what it returned, in full.",
     buys:
-      "Whole tool inputs and outputs, capped at 60 KB each - but carried on " +
-      "span events, so this one delivers nothing at all until the traces " +
-      "exporter and the spans flag on the run above are both set.",
+      "Whole tool inputs and outputs, capped at 60 KB each: a tool_input " +
+      "attribute on tool_result events, and tool_output where there is one. " +
+      "Anthropic also carries them on span events, which need the traces " +
+      "exporter and the spans flag on the run above - this receiver reads the " +
+      "events and counts what arrives on them.",
     check: { kind: "truthy" },
   },
 ];
@@ -910,6 +912,20 @@ export interface LiveEvidence {
    */
   promptsWithText: number;
   repliesWithText: number;
+  /**
+   * Tool events carrying the attributes the two tool settings add.
+   *
+   * Read off records this receiver has actually stored, because Anthropic's
+   * documentation names the settings and not the attributes: with
+   * `OTEL_LOG_TOOL_DETAILS` on, `tool_decision` and `tool_result` events
+   * carry `tool_parameters` (the command, the description, the MCP server and
+   * tool, the skill); with `OTEL_LOG_TOOL_CONTENT` on, `tool_result` events
+   * carry `tool_input`, and `tool_output` where there is one. Both settings
+   * are also said to ride on span events, which this receiver does not read -
+   * so these two figures can under-count and never over-count.
+   */
+  toolEventsWithArgs: number;
+  toolEventsWithContent: number;
 }
 
 /** Whether one requirement's signal has been seen, and the count behind it. */
@@ -951,13 +967,22 @@ const RECEIPTS: Record<string, (live: LiveEvidence) => Receipt> = {
   OTEL_LOG_ASSISTANT_RESPONSES: (l) =>
     count(l.repliesWithText, "reply with its text", "replies with their text"),
   /*
-   * OTEL_LOG_TOOL_DETAILS and OTEL_LOG_TOOL_CONTENT have no row here on
-   * purpose. Their effect lands on attributes this receiver has never seen
-   * arrive - tool content rides on span events, and nothing has sent a span
-   * yet - so any count would be a zero that cannot be told apart from a
-   * setting that is working. `receiptFor` returns null and the panel draws no
-   * Arrived line at all, which is the honest shape.
+   * These two had no row for a while, on the argument that their attributes
+   * rode on span events nothing had ever sent. They arrive on log events too -
+   * see `LiveEvidence` for what was measured - and the gap cost the diagram:
+   * with no receipt, `Stop` wrote no `--fill`, the stylesheet's flat 76% took
+   * over, and the two vessels with the least evidence behind them were the
+   * two brimming ones. The receipt names the attribute so a reader can check
+   * the count against the tap.
    */
+  OTEL_LOG_TOOL_DETAILS: (l) =>
+    count(l.toolEventsWithArgs, "tool event carrying tool_parameters", "tool events carrying tool_parameters"),
+  OTEL_LOG_TOOL_CONTENT: (l) =>
+    count(
+      l.toolEventsWithContent,
+      "tool event carrying tool_input or tool_output",
+      "tool events carrying tool_input or tool_output",
+    ),
 };
 
 /**

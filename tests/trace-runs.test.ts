@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BandMarks } from "../src/components/BandMarks";
+import { TraceEmpty } from "../src/components/TraceEmpty";
 import { TraceRunList } from "../src/components/TraceRunList";
 import type { TraceableSession } from "../src/db/QueryRepository";
 import { DEFAULT_BANDS, bandOf, type BandMeasure } from "../src/domain/runBands";
@@ -91,7 +92,7 @@ describe("BandMarks", () => {
  * runs it is hiding.
  */
 const SESSIONS: TraceableSession[] = [
-  { sessionId: "aaaaaaaa-1", projectPath: "/p", startedAt: "2026-08-01T09:00", endedAt: "2026-08-01T10:00", blocks: 120, costUsd: 22.23, toolCalls: 70, otelSpans: 0 },
+  { sessionId: "aaaaaaaa-1", projectPath: "/p", startedAt: "2026-08-01T09:00", endedAt: "2026-08-01T10:00", blocks: 120, costUsd: 22.23, toolCalls: 70, otelSpans: 4 },
   { sessionId: "bbbbbbbb-2", projectPath: "/p", startedAt: "2026-08-02T09:00", endedAt: "2026-08-02T10:00", blocks: 8, costUsd: null, toolCalls: 0, otelSpans: 0 },
 ];
 
@@ -117,6 +118,21 @@ describe("TraceRunList", () => {
     expect(html).toContain(">70<");
     // The unpriced run says so rather than showing a number it does not have.
     expect(html).toContain("—");
+  });
+
+  /**
+   * The fact the OTEL-only switch filters on, shown on the row - so a reader
+   * can see which runs it would keep before flipping it, and so a list
+   * emptied by it can be understood from the rows that were there. Never the
+   * glyph alone: the count is in the title and in a hidden word.
+   */
+  it("marks which runs have spans, in a word as well as a glyph", () => {
+    const html = list();
+    expect(html).toContain('class="run-spans on"');
+    expect(html).toContain('title="4 OTEL spans"');
+    expect(html).toContain(", 4 spans");
+    expect(html).toContain('title="No OTEL spans"');
+    expect(html).toContain(", no spans");
   });
 
   /**
@@ -168,5 +184,44 @@ describe("TraceRunList", () => {
 
     expect(shut).toContain("2 in this project");
     expect(shut).toContain("hidden");
+  });
+});
+
+/**
+ * The pane with nothing in it. It has to say why, and it has to offer the way
+ * out for exactly the filters that are on - each button saying what it will
+ * produce, counted, because the day this happened for real a run with spans
+ * sat one day outside the date range and the page answered with blank space.
+ */
+describe("TraceEmpty", () => {
+  const pane = (widen: { dates: number | null; otel: number | null }) =>
+    renderToStaticMarkup(createElement(TraceEmpty, { problem: "No run ended in range with an OTEL span.", widen }));
+
+  it("repeats the reason where the eye lands, and names both filters", () => {
+    const html = pane({ dates: 1, otel: 11 });
+    expect(html).toContain("No run to show.");
+    expect(html).toContain("No run ended in range with an OTEL span.");
+    expect(html).toContain("OTEL only");
+    expect(html).toContain("date filter");
+  });
+
+  it("offers a counted way out of each filter that is on, and none for one that is off", () => {
+    const both = pane({ dates: 1, otel: 11 });
+    expect(both).toContain("Show every date — 1 run<");
+    expect(both).toContain("Show runs without spans — 11 runs<");
+
+    const datesOnly = pane({ dates: 3, otel: null });
+    expect(datesOnly).toContain("Show every date");
+    expect(datesOnly).not.toContain("without spans");
+
+    expect(pane({ dates: null, otel: null })).not.toContain("<form");
+  });
+
+  it("posts the same values the run list's own controls post", () => {
+    // The buttons are the list's filters from the other side; a value the
+    // action would not recognise is a button that does nothing.
+    const html = pane({ dates: 1, otel: 1 });
+    expect(html).toMatch(/<button[^>]*value="all"[^>]*name="window"|<button[^>]*name="window"[^>]*value="all"/);
+    expect(html).toContain('name="otel" value="false"');
   });
 });

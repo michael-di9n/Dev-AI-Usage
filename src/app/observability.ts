@@ -1,11 +1,12 @@
 import { runInstrumentation } from "../analyze/instrumentation/index";
 import type { LiveEvidence, SettingsScan } from "../domain/instrumentation";
-import { TAP_LINES, tapLines, type TraceTap } from "../domain/traceTap";
+import { TAP_LINES, parseTapKinds, tapLines, type TraceTap } from "../domain/traceTap";
 import type { Signal } from "../domain/types";
 import { SettingsScanner } from "../ingest/settings/SettingsScanner";
 import { sync } from "./background-sync";
 import { app } from "./dashboard";
 import { selectedRepo, type PickableProject } from "./selected-repo";
+import { TAP_KINDS_KEY } from "./tap-key";
 import { USER_SETTINGS_PATH } from "./user-settings-key";
 
 /**
@@ -86,13 +87,17 @@ export function observabilityView(receiverOrigin: string): ObservabilityView {
 }
 
 /**
- * The tally and the lines, from the counts already read.
+ * The tally, the switches and the lines, from the counts already read.
  *
  * The four counts come off `live` rather than being queried again: they are
  * the same four numbers, and asking twice is how a window ends up disagreeing
- * with the page it opened from. Only the records themselves need a query.
+ * with the page it opened from. Only the records themselves need a query, and
+ * which streams that query reads is the reader's stored choice - the switches
+ * on the window render showing the same value, so the two can never disagree.
  */
 function traceTap(live: LiveEvidence, projectPath: string | null): TraceTap {
+  const queries = app().queries;
+  const kinds = parseTapKinds(queries.readState(TAP_KINDS_KEY));
   return {
     heard: {
       events: live.events,
@@ -101,7 +106,8 @@ function traceTap(live: LiveEvidence, projectPath: string | null): TraceTap {
       sessions: live.sessions,
       lastSeen: live.otelLastSeen,
     },
-    lines: tapLines(app().queries.otelRecentEvents(TAP_LINES, projectPath)),
+    kinds,
+    lines: tapLines(queries.otelRecentRecords(TAP_LINES, projectPath, kinds)),
   };
 }
 
@@ -124,5 +130,7 @@ function liveEvidence(projectPath: string | null): LiveEvidence {
     timedToolCalls: tools.timed,
     promptsWithText: content.prompts,
     repliesWithText: content.replies,
+    toolEventsWithArgs: content.toolArgs,
+    toolEventsWithContent: content.toolContent,
   };
 }

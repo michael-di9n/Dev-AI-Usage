@@ -3,15 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
-  TAP_LINES,
+  TAP_KINDS,
+  TAP_STREAM,
   banner,
+  formatTapKinds,
   glitch,
+  tapCommand,
   tapState,
+  toggleTapKind,
   waterFill,
+  type TapKind,
   type TapLine,
   type TraceTap,
 } from "../domain/traceTap";
 import { localDateTime } from "../domain/localClock";
+import { setTapKinds } from "../app/tap-actions";
 import { LiveTap } from "./LiveRefresh";
 
 /**
@@ -57,9 +63,13 @@ export function TraceMonitor({ on, tap }: { on: boolean; tap: TraceTap }) {
       <button
         type="button"
         className={on ? "rp-end on" : "rp-end"}
-        // Overrides the flat `--fill` `.rp-end`/`.rp-end.on` set in CSS: how
-        // much has actually arrived, not just whether the tier is complete.
-        style={{ "--fill": `${waterFill(tap.heard.events)}%` } as CSSProperties}
+        // Overrides the flat `--fill` `.rp-end.on` sets in CSS: how much has
+        // actually arrived, not just whether the tier is complete. Only when
+        // on - a dry terminus keeps its 20% dregs, because the word sits in
+        // the middle of this vessel and was measured against the panel, and
+        // `waterFill` starts at 40 (see FILL_FLOOR) which would put murk
+        // behind it.
+        style={on ? ({ "--fill": `${waterFill(tap.heard.events)}%` } as CSSProperties) : undefined}
         aria-haspopup="dialog"
         /*
          * The whole of it, because this control is a circle with one word in
@@ -139,11 +149,14 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
         <LiveTap />
       </p>
 
-      {/* Flavour, and honest flavour: this is what the window is showing. It
-          is `aria-hidden` because a screen reader reading out a shell prompt
-          that cannot be typed into is noise. */}
+      <Switches kinds={tap.kinds} />
+
+      {/* Flavour, and honest flavour: this is what the window is showing -
+          the streams switched on, and no others. It is `aria-hidden` because a
+          screen reader reading out a shell prompt that cannot be typed into is
+          noise. */}
       <p className="mon-cmd" aria-hidden="true">
-        <span className="mon-prompt">$</span> tail -n {TAP_LINES} otel/events
+        <span className="mon-prompt">$</span> {tapCommand(tap.kinds)}
         <span className="mon-caret" />
       </p>
 
@@ -166,13 +179,60 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
       </dl>
 
       {state === "lines" ? <Log lines={tap.lines} /> : null}
-      {state === "quiet" ? <Quiet /> : null}
+      {state === "quiet" ? <Quiet kinds={tap.kinds} /> : null}
       {state === "dark" ? <Dark /> : null}
 
       <form method="dialog" className="mon-shut">
         <button type="submit" className="btn">Close</button>
       </form>
     </dialog>
+  );
+}
+
+/**
+ * One switch per stream, and the rule that one stays on.
+ *
+ * Forms, not click handlers, for the reason the run list gives: the choice is
+ * stored, so it goes through a server action like every other stored choice,
+ * and the button computes the list it would leave behind rather than posting
+ * the one switch it is - so `toggleTapKind`, which refuses to switch off the
+ * last stream, is the same function that greys the button out. `aria-pressed`
+ * because these are filters, not tabs: several can be on at once.
+ *
+ * Each switch wears its stream's ink, and the word beside it is the channel
+ * that survives greyscale. The same two things a row carries, in the same
+ * order, so the legend and the log agree without a key to look up.
+ */
+function Switches({ kinds }: { kinds: TapKind[] }) {
+  return (
+    <div className="mon-kinds" role="group" aria-label="Streams to read">
+      {TAP_KINDS.map((kind) => {
+        const on = kinds.includes(kind);
+        const next = toggleTapKind(kinds, kind);
+        const last = on && kinds.length === 1;
+        return (
+          <form action={setTapKinds} key={kind}>
+            <input type="hidden" name="kinds" value={formatTapKinds(next)} />
+            <button
+              type="submit"
+              className="mon-kind"
+              data-kind={kind}
+              aria-pressed={on}
+              disabled={last}
+              title={
+                last
+                  ? `${TAP_STREAM[kind]} is the only stream on; one has to stay on`
+                  : `${on ? "Hide" : "Show"} ${TAP_STREAM[kind]}`
+              }
+            >
+              <i aria-hidden="true" />
+              <span className="term-kind">{kind}</span>
+              <span className="vh"> — {TAP_STREAM[kind]}</span>
+            </button>
+          </form>
+        );
+      })}
+    </div>
   );
 }
 
@@ -203,8 +263,15 @@ function Log({ lines }: { lines: TapLine[] }) {
       </p>
       <ol className="mon-out">
         {lines.map((line, i) => (
-          <li className="term-line" key={`${line.at}-${line.name}-${i}`}>
+          /*
+            `data-kind` is what the stylesheet colours by; the word inside
+            `.term-kind` is what a reader who cannot see the colour reads. The
+            colour says which table the row came out of and nothing else - a
+            span is not better news than a metric point.
+          */
+          <li className="term-line" data-kind={line.kind} key={`${line.at}-${line.kind}-${line.name}-${i}`}>
             <span className="term-ts">{line.at}</span>
+            <span className="term-kind">{line.kind}</span>
             {/* A record with no session id is a record that arrived without
                 one, which is a gap and not a zero: an em dash, like everywhere
                 else in this app. */}
@@ -228,21 +295,23 @@ function Log({ lines }: { lines: TapLine[] }) {
 }
 
 /**
- * Something arrived, but nothing with a line in it.
+ * Something arrived, but nothing on the streams switched on.
  *
- * The split that stops this window lying. Metric points and spans are not log
- * records, so a machine with `OTEL_METRICS_EXPORTER` set and
- * `OTEL_LOGS_EXPORTER` unset has working telemetry and an empty terminal - and
- * showing the dry sign there would tell a reader their setup is broken while
- * the tally above it counts what arrived.
+ * The split that stops this window lying. A reader can put the window on
+ * spans alone before the first span has arrived, and a receiver holding forty
+ * thousand metric points is not a receiver that has heard nothing - showing
+ * the dry sign there would tell a reader their setup is broken while the tally
+ * above it counts what arrived. Names the streams that are off, because
+ * flipping one of them back on is the way out.
  */
-function Quiet() {
+function Quiet({ kinds }: { kinds: TapKind[] }) {
+  const off = TAP_KINDS.filter((k) => !kinds.includes(k)).map((k) => TAP_STREAM[k]);
   return (
     <p className="mon-empty term-empty">
-      Records are arriving, and none of them are events — so there is nothing
-      with a line in it to print. This window reads the log stream, which is
-      what <code>OTEL_LOGS_EXPORTER</code> fills. The counts above are what did
-      arrive.
+      Records are arriving, and none of them on the stream{kinds.length === 1 ? "" : "s"} this
+      window is reading ({kinds.map((k) => TAP_STREAM[k]).join(", ")}). The counts above are what
+      did arrive
+      {off.length > 0 ? <>; switch {off.join(" or ")} back on to read {off.length === 1 ? "it" : "them"}</> : null}.
     </p>
   );
 }

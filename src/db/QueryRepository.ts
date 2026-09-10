@@ -196,10 +196,17 @@ export interface OtelSpanSummary {
   lastSeen: string | null;
 }
 
-/** Events whose text came through, rather than arriving as `<REDACTED>`. */
+/**
+ * Events whose text came through, rather than arriving as `<REDACTED>`, and
+ * tool events carrying the attributes the two tool settings add.
+ */
 export interface ContentReceived {
   prompts: number;
   replies: number;
+  /** Tool events with a `tool_parameters` attribute - `OTEL_LOG_TOOL_DETAILS`. */
+  toolArgs: number;
+  /** Tool events with `tool_input` or `tool_output` - `OTEL_LOG_TOOL_CONTENT`. */
+  toolContent: number;
 }
 
 export interface OtelEventLine {
@@ -208,6 +215,31 @@ export interface OtelEventLine {
   sessionId: string | null;
   requestId: string | null;
   attrs: Record<string, string>;
+}
+
+/** Which of the three OTLP streams a record came down. */
+export type OtelStream = "log" | "metric" | "span";
+
+/**
+ * One record of any stream, as the trace-tap window reads it.
+ *
+ * The three tables share a timestamp, a name, a session and an attribute bag;
+ * the two columns that only one of them has ride along as nulls on the others,
+ * so one row shape serves the window and it never has to ask which table a
+ * line came from - `kind` says.
+ */
+export interface OtelRecordLine {
+  kind: OtelStream;
+  ts: string;
+  name: string;
+  sessionId: string | null;
+  attrs: Record<string, string>;
+  /** Metric points only. */
+  value: number | null;
+  /** Spans only. Null when the span had no usable end - never coalesced to 0. */
+  durationMs: number | null;
+  /** Spans only. */
+  status: string | null;
 }
 
 export interface OtelKind {
@@ -971,9 +1003,26 @@ export class QueryRepository {
         [name, `$.${attr}`, `$.${attr}`, ...params],
       )?.n ?? 0;
 
+    /*
+     * The tool settings add attributes rather than un-redacting them: a tool
+     * event with the setting off simply has no `tool_parameters` key. So
+     * presence is the whole test. Both tool event names count, because
+     * `tool_parameters` arrives on the decision and on the result.
+     */
+    const carrying = (attrs: string[]): number =>
+      this.db.one<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM otel_event
+          WHERE name IN ('tool_decision', 'tool_result')
+            AND (${attrs.map(() => "json_extract(attrs_json, ?) IS NOT NULL").join(" OR ")})
+            AND ${predicate}`,
+        [...attrs.map((attr) => `$.${attr}`), ...params],
+      )?.n ?? 0;
+
     return {
       prompts: of("user_prompt", "prompt"),
       replies: of("assistant_response", "response"),
+      toolArgs: carrying(["tool_parameters"]),
+      toolContent: carrying(["tool_input", "tool_output"]),
     };
   }
 
@@ -1016,6 +1065,57 @@ export class QueryRepository {
         sessionId: r.session_id === null ? null : String(r.session_id),
         requestId: r.request_id === null ? null : String(r.request_id),
         attrs: JSON.parse(String(r.attrs_json)) as Record<string, string>,
+      }));
+  }
+
+  /**
+   * The newest records across the streams asked for, as one list.
+   *
+   * Each stream is cut to `limit` on its own index before the three are put
+   * together and cut again, so the union sorts at most three windows rather
+   * than three tables - the metric table alone is tens of thousands of rows.
+   * Only the streams in `kinds` are read: a switched-off stream costs nothing,
+   * and an empty `kinds` reads nothing, which the caller is expected never to
+   * ask for (see `parseTapKinds`).
+   *
+   * Spans sort by when they started, because that is the instant a span has
+   * that the other two records have: the moment something began to happen.
+   */
+  otelRecentRecords(
+    limit: number,
+    projectPath: string | null,
+    kinds: readonly OtelStream[],
+  ): OtelRecordLine[] {
+    const { predicate, params } = this.projectSessionFilter(projectPath);
+    const arms: Record<OtelStream, string> = {
+      log: `SELECT 'log' AS kind, ts, name, session_id, attrs_json,
+                   NULL AS value, NULL AS duration_ms, NULL AS status
+              FROM otel_event WHERE ${predicate} ORDER BY ts DESC, rowid DESC LIMIT ?`,
+      metric: `SELECT 'metric' AS kind, ts, name, session_id, attrs_json,
+                      value, NULL AS duration_ms, NULL AS status
+                 FROM otel_metric WHERE ${predicate} ORDER BY ts DESC, rowid DESC LIMIT ?`,
+      span: `SELECT 'span' AS kind, started_at AS ts, name, session_id, attrs_json,
+                    NULL AS value, duration_ms, status
+               FROM otel_span WHERE ${predicate} ORDER BY started_at DESC, rowid DESC LIMIT ?`,
+    };
+    const wanted = (["log", "metric", "span"] as const).filter((k) => kinds.includes(k));
+    if (wanted.length === 0) return [];
+
+    return this.db
+      .all<Record<string, unknown>>(
+        `SELECT * FROM (${wanted.map((k) => `SELECT * FROM (${arms[k]})`).join(" UNION ALL ")})
+          ORDER BY ts DESC LIMIT ?`,
+        [...wanted.flatMap(() => [...params, limit]), limit],
+      )
+      .map((r) => ({
+        kind: r.kind as OtelStream,
+        ts: String(r.ts),
+        name: String(r.name),
+        sessionId: r.session_id === null ? null : String(r.session_id),
+        attrs: JSON.parse(String(r.attrs_json)) as Record<string, string>,
+        value: r.value == null ? null : Number(r.value),
+        durationMs: r.duration_ms == null ? null : Number(r.duration_ms),
+        status: r.status == null ? null : String(r.status),
       }));
   }
 

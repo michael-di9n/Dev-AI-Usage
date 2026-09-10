@@ -96,6 +96,15 @@ export function ReadinessPipe({
   const dropAt = gating[0]?.cells.length ?? 0;
   const flowing = reached(dropAt);
   const heard = wordsAreSent(cells, content);
+  /*
+    What the Words terminus fills by: every record that carried text, across
+    the four vessels feeding it. The same `waterFill` the Trace terminus and
+    every met node use, so the two termini are read by one rule - this one
+    used to take the stylesheet's flat 78% while the vessel beside it took a
+    count, and the pair could not be compared by eye.
+  */
+  const words =
+    live.promptsWithText + live.repliesWithText + live.toolEventsWithArgs + live.toolEventsWithContent;
 
   return (
     <section className="rp">
@@ -228,7 +237,14 @@ export function ReadinessPipe({
           <span className="rp-tap rp-tap-end">
             <i className={flowing ? "rp-stub wet" : "rp-stub"} aria-hidden="true" />
             <span className="rp-stop rp-stop-end rp-anchor-end">
-              <b className={heard ? "rp-end on" : "rp-end"} title={`Words in the trace — ${heard ? "on" : "off"}`}>
+              <b
+                className={heard ? "rp-end on" : "rp-end"}
+                /* Only when on, like the Trace terminus: a dry terminus keeps
+                   its 20% dregs so the word stays on the panel it was
+                   measured against. */
+                style={heard ? ({ "--fill": `${waterFill(words)}%` } as CSSProperties) : undefined}
+                title={`Words in the trace — ${heard ? "on" : "off"}`}
+              >
                 <span className="rp-water" />
                 <span className="rp-end-word">{heard ? "on" : "off"}</span>
               </b>
@@ -243,7 +259,7 @@ export function ReadinessPipe({
                 hint={
                   heard
                     ? "Only sessions started since it was set carry text."
-                    : "Needs tier 1 and one of the four — either alone sends nothing. Args and Output ride on spans, so they need tier 2 as well."
+                    : "Needs tier 1 and one of the four — either alone sends nothing. Args and Output arrive on the tool events, so they need nothing more than tier 1."
                 }
               />
             </span>

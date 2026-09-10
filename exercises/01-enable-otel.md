@@ -116,8 +116,8 @@ default.
 |---|---|---|
 | `OTEL_LOG_USER_PROMPTS` | off | The `prompt` attribute on `user_prompt` events. Without it the event still arrives with `prompt_length`, so you see that something was asked and never what. Also turns on assistant responses unless that is set on its own. |
 | `OTEL_LOG_ASSISTANT_RESPONSES` | follows the above | The `response` attribute on `assistant_response` events, capped at 60 KB. |
-| `OTEL_LOG_TOOL_DETAILS` | off | Tool parameters — whole Bash command strings, MCP server and tool names, skill names, tool input. |
-| `OTEL_LOG_TOOL_CONTENT` | off | Whole tool inputs and outputs, capped at 60 KB, **carried on span events** — so it delivers nothing until the two trace variables above are working. |
+| `OTEL_LOG_TOOL_DETAILS` | off | A `tool_parameters` attribute on `tool_decision` and `tool_result` events — whole Bash command strings, MCP server and tool names, skill names. |
+| `OTEL_LOG_TOOL_CONTENT` | off | Whole tool inputs and outputs, capped at 60 KB: a `tool_input` attribute on `tool_result` events, and `tool_output` where there is one. Also carried on span events, which this receiver does not read. |
 
 `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH` (default `61440`) is the 60 KB ceiling
 those truncate at.
