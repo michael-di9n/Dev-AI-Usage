@@ -1,17 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { useCallback, useEffect, useOptimistic, useRef, useState } from "react";
 import {
   TAP_KINDS,
   TAP_STREAM,
   banner,
   formatTapKinds,
   glitch,
+  linesFor,
   tapCommand,
   tapState,
   toggleTapKind,
-  waterFill,
   type TapKind,
   type TapLine,
   type TraceTap,
@@ -63,13 +62,6 @@ export function TraceMonitor({ on, tap }: { on: boolean; tap: TraceTap }) {
       <button
         type="button"
         className={on ? "rp-end on" : "rp-end"}
-        // Overrides the flat `--fill` `.rp-end.on` sets in CSS: how much has
-        // actually arrived, not just whether the tier is complete. Only when
-        // on - a dry terminus keeps its 20% dregs, because the word sits in
-        // the middle of this vessel and was measured against the panel, and
-        // `waterFill` starts at 40 (see FILL_FLOOR) which would put murk
-        // behind it.
-        style={on ? ({ "--fill": `${waterFill(tap.heard.events)}%` } as CSSProperties) : undefined}
         aria-haspopup="dialog"
         /*
          * The whole of it, because this control is a circle with one word in
@@ -84,7 +76,19 @@ export function TraceMonitor({ on, tap }: { on: boolean; tap: TraceTap }) {
         onClick={() => setOpen(true)}
       >
         <span className="rp-water" />
-        <span className="rp-end-word">{on ? "on" : "off"}</span>
+        {/*
+          Only when the line is dry.
+
+          A dry vessel is a still one, so it needs the word: there is nothing
+          in it to look at and nothing to tell it from a vessel that is merely
+          waiting. A running one says it by turning, and the word sat in the
+          middle of the whirlpool covering the eye - the one part of it that
+          is the point. The state is not left to the motion alone, which is
+          the rule this diagram is drawn by: the tag directly beneath says
+          `durations arrive` in words, the panel it opens says `on`, and this
+          button's own `aria-label` opens with it.
+        */}
+        {on ? null : <span className="rp-end-word">off</span>}
       </button>
 
       {open ? <Monitor on={on} tap={tap} onClose={shut} /> : null}
@@ -105,6 +109,10 @@ export function TraceMonitor({ on, tap }: { on: boolean; tap: TraceTap }) {
  */
 function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  /* Which row's detail window is open, or none. The row itself rather than an
+     index, because the list under it is re-read on every OTLP arrival and an
+     index would start pointing at a different record mid-read. */
+  const [detail, setDetail] = useState<TapLine | null>(null);
 
   useEffect(() => {
     const element = dialog.current;
@@ -113,25 +121,60 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
     element.showModal();
 
     /*
+     * Escape does not shut this window. Nor does the backdrop - see the
+     * missing `onClick` below.
+     *
+     * It is a terminal being read while records land in it, and both of the
+     * usual dismissals are gestures a reader makes for other reasons: Escape
+     * after a stray keystroke, a click on the page to bring the tab forward.
+     * Losing forty lines of a live tail to either is worse than the cost of
+     * being explicit, and `Close` is on screen the whole time. The detail
+     * window this one opens keeps both dismissals, because it holds one
+     * record that is still in the row behind it.
+     *
+     * Guarded on the target: `cancel` does not bubble, but the detail dialog
+     * is a modal of its own and this must never be what refuses its Escape.
+     */
+    const hold = (event: Event) => { if (event.target === element) event.preventDefault(); };
+    element.addEventListener("cancel", hold);
+
+    /*
      * `close`, listened for on the element rather than through JSX's `onClose`.
      * The JSX handler does not fire for a dismissal by Escape - the bug
      * `StepWindow` documents at length - which leaves the dialog shut and the
      * state saying it is open, so the vessel can never be clicked again.
      */
     element.addEventListener("close", onClose);
-    return () => element.removeEventListener("close", onClose);
+    return () => {
+      element.removeEventListener("close", onClose);
+      element.removeEventListener("cancel", hold);
+    };
   }, [onClose]);
 
-  const state = tapState(tap.heard, tap.lines);
+  /*
+   * The stored choice, and the flip the reader has just made but the server
+   * has not confirmed yet.
+   *
+   * Seeded from `tap.kinds`, so the rule that the control renders showing the
+   * stored value is unchanged: this *is* that value until a click, and
+   * `setTapKinds` revalidates back to it afterwards, so the switches and the
+   * page can still never name different things. What it adds is the other
+   * half of the same rule - a selection has to act immediately. It used to be
+   * three forms posting to a server action that re-rendered the whole page,
+   * so a filter button cost what a navigation costs; the narrowing is local
+   * now and the round trip only records it.
+   */
+  const [kinds, flip] = useOptimistic(tap.kinds, (_current, next: TapKind[]) => next);
+
+  // Every stream's window came down; these are the switched-on ones.
+  const lines = linesFor(tap.lines, kinds);
+  const state = tapState(tap.heard, lines);
 
   return (
-    <dialog
-      ref={dialog}
-      className="mon"
-      /* The backdrop belongs to the dialog, so a click on it lands here and
-         nowhere else - the gesture everyone tries first. */
-      onClick={(event) => { if (event.target === dialog.current) onClose(); }}
-    >
+    <>
+    {/* No `onClick` on the backdrop, deliberately: see the `cancel` handler
+        above for why this window is the one that has to be shut on purpose. */}
+    <dialog ref={dialog} className="mon">
       <p className="mon-bar">
         <b>trace-tap</b>
         <span className="mon-where">otlp receiver · this process</span>
@@ -149,14 +192,14 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
         <LiveTap />
       </p>
 
-      <Switches kinds={tap.kinds} />
+      <Switches kinds={kinds} onFlip={flip} />
 
       {/* Flavour, and honest flavour: this is what the window is showing -
           the streams switched on, and no others. It is `aria-hidden` because a
           screen reader reading out a shell prompt that cannot be typed into is
           noise. */}
       <p className="mon-cmd" aria-hidden="true">
-        <span className="mon-prompt">$</span> {tapCommand(tap.kinds)}
+        <span className="mon-prompt">$</span> {tapCommand(kinds)}
         <span className="mon-caret" />
       </p>
 
@@ -178,9 +221,107 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
         </div>
       </dl>
 
-      {state === "lines" ? <Log lines={tap.lines} /> : null}
-      {state === "quiet" ? <Quiet kinds={tap.kinds} /> : null}
+      {state === "lines" ? <Log lines={lines} onOpen={setDetail} /> : null}
+      {state === "quiet" ? <Quiet kinds={kinds} /> : null}
       {state === "dark" ? <Dark /> : null}
+
+      <form method="dialog" className="mon-shut">
+        <button type="submit" className="btn">Close</button>
+      </form>
+    </dialog>
+
+    {/* A sibling rather than a child, so nothing about shutting it can reach
+        the window it was opened from - `showModal` puts it on the top layer
+        either way, and the stack is what makes Escape and the backdrop act on
+        this one alone. */}
+    {detail ? <Detail line={detail} onDone={() => setDetail(null)} /> : null}
+    </>
+  );
+}
+
+/**
+ * One record, whole - what the count at the end of a row opens.
+ *
+ * The row prints four attributes and says how many it could not fit, which is
+ * honest but is not the same as being readable: a `tool_result` carrying its
+ * output, or an `api_request` carrying eleven token counts, is a record whose
+ * interesting half is always in the part that did not fit. The count was the
+ * only thing on this window that named something a reader could not then go
+ * and look at.
+ *
+ * Dismissed by clicking off it or by Escape, unlike the terminal underneath.
+ * The asymmetry is the point: this holds one record which is still printed in
+ * the row behind it, so closing it by accident costs nothing, and the reader
+ * is returned to the tail they were reading rather than to the page.
+ */
+function Detail({ line, onDone }: { line: TapLine; onDone: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+
+    element.showModal();
+
+    /*
+     * Opened at the top, looking at the first attribute.
+     *
+     * `showModal` gives focus to the first focusable thing inside, and in here
+     * that is `Close` at the very bottom - so the browser scrolled it into
+     * view and the window opened at its own end, past everything the reader
+     * had just asked to see. Focusing the dialog itself is what stops that;
+     * the `scrollTop` after it is belt and braces for the case where
+     * something focusable ends up above the list later.
+     */
+    element.focus();
+    element.scrollTop = 0;
+
+    // Same reason the window underneath listens here rather than in JSX: a
+    // dismissal by Escape never reaches React's `onClose`.
+    element.addEventListener("close", onDone);
+    return () => element.removeEventListener("close", onDone);
+  }, [onDone]);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="mon mon-detail"
+      /* Focusable so the effect above can park focus here rather than on the
+         Close button at the bottom. -1, because it is not a tab stop. */
+      tabIndex={-1}
+      aria-label={`${line.name} — every attribute on this record`}
+      /* The backdrop belongs to the dialog, so a click on it lands here. This
+         is the top modal in the stack, so the terminal underneath never sees
+         the gesture - which is the whole requirement. */
+      onClick={(event) => { if (event.target === dialog.current) dialog.current?.close(); }}
+    >
+      <p className="mon-bar">
+        <b>record</b>
+        <span className="mon-where" data-kind={line.kind}>
+          <span className="term-kind">{line.kind}</span> · {line.name}
+        </span>
+        <span className="mon-state">{line.at}</span>
+      </p>
+
+      {/* Says what is in here as against the row, because "every" is a claim:
+          the row's four, the ones it counted, and the ones it drops for being
+          the same on every record. */}
+      <p className="mon-label">
+        {line.detail.length.toLocaleString()} attribute{line.detail.length === 1 ? "" : "s"}
+        {line.more > 0 ? `, including the ${line.more} the row could not fit` : ""}
+        {" — whole, not cut to the width of a line."}
+      </p>
+
+      <dl className="mon-pairs">
+        {line.detail.map(([key, value]) => (
+          <div key={key}>
+            <dt>{key}</dt>
+            {/* An attribute that arrived empty is not an attribute that
+                arrived: an em dash, like everywhere else here. */}
+            <dd>{value === "" ? <span className="dash">—</span> : value}</dd>
+          </div>
+        ))}
+      </dl>
 
       <form method="dialog" className="mon-shut">
         <button type="submit" className="btn">Close</button>
@@ -203,7 +344,7 @@ function Monitor({ on, tap, onClose }: { on: boolean; tap: TraceTap; onClose: ()
  * that survives greyscale. The same two things a row carries, in the same
  * order, so the legend and the log agree without a key to look up.
  */
-function Switches({ kinds }: { kinds: TapKind[] }) {
+function Switches({ kinds, onFlip }: { kinds: TapKind[]; onFlip: (next: TapKind[]) => void }) {
   return (
     <div className="mon-kinds" role="group" aria-label="Streams to read">
       {TAP_KINDS.map((kind) => {
@@ -211,7 +352,22 @@ function Switches({ kinds }: { kinds: TapKind[] }) {
         const next = toggleTapKind(kinds, kind);
         const last = on && kinds.length === 1;
         return (
-          <form action={setTapKinds} key={kind}>
+          <form
+            key={kind}
+            /*
+             * Still a form and still a server action, because the choice is
+             * stored and every stored choice here goes through `app_state`.
+             * What changed is the order: the switch and the log move first
+             * and the round trip records it, rather than the round trip being
+             * what moves them. The action prop is a transition, which is what
+             * `useOptimistic` needs to hold the overlay until the server
+             * agrees.
+             */
+            action={(formData: FormData) => {
+              onFlip(next);
+              return setTapKinds(formData);
+            }}
+          >
             <input type="hidden" name="kinds" value={formatTapKinds(next)} />
             <button
               type="submit"
@@ -255,7 +411,7 @@ function Cell({ label, n }: { label: string; n: number }) {
  * record is at the top of the query. Said out loud on the heading, because a
  * log whose order a reader has to infer is a log they will misread.
  */
-function Log({ lines }: { lines: TapLine[] }) {
+function Log({ lines, onOpen }: { lines: TapLine[]; onOpen: (line: TapLine) => void }) {
   return (
     <>
       <p className="mon-label">
@@ -283,9 +439,24 @@ function Log({ lines }: { lines: TapLine[] }) {
                   {key}=<b>{value}</b>{" "}
                 </span>
               ))}
-              {/* Never dropped in silence. A row that quietly showed four of a
-                  record's twelve attributes would be a record misreported. */}
-              {line.more > 0 ? <i>+{line.more} more</i> : null}
+              {/*
+                Never dropped in silence, and now not merely counted either. A
+                row that quietly showed four of a record's twelve attributes
+                would be a record misreported; a row that says it has eight
+                more and gives no way to read them is a record half-reported.
+                The count is the control, because it is already the thing on
+                the row that names what is missing.
+              */}
+              {line.more > 0 ? (
+                <button
+                  type="button"
+                  className="mon-more"
+                  onClick={() => onOpen(line)}
+                  aria-label={`Show all ${line.detail.length} attributes on this ${line.name} record`}
+                >
+                  +{line.more} more
+                </button>
+              ) : null}
             </span>
           </li>
         ))}

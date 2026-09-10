@@ -296,7 +296,14 @@ switched off. The attributes that are the same on every record — the machine,
 the account, the correlation ids — are dropped, and the ones a reader turned a
 setting on to see — the prompt, the reply, `tool_parameters`, `tool_input` —
 are printed first, so the four per row are the ones about the work. Anything
-cut is counted at the end of the row rather than dropped in silence. If nothing
+cut is counted at the end of the row rather than dropped in silence, and that
+count is a control: click it and a second, smaller window opens on that one
+record whole - every attribute it carried, values uncut and with their newlines
+kept, including the constants the row drops and the session id the row
+shortens to eight characters. That window is dismissed by clicking off it or
+by Escape, and doing so returns you to the tail rather than to the page. The
+terminal underneath takes neither gesture: it is read while records land in
+it, and `Close` is the only thing that shuts it. If nothing
 has ever arrived it says so as a sign, and names the variable that would fill
 it; if something has arrived but nothing on the streams switched on, it says
 that instead and names the streams that are off, because a receiver holding

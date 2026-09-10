@@ -16,6 +16,14 @@ import { TAP_KINDS_KEY } from "./tap-key";
  * anything that would have left the window reading nothing.
  *
  * Looking at the window writes nothing. Flipping a switch on it writes this.
+ *
+ * `revalidatePath` stays, and it is worth saying why now that the window
+ * narrows its own log: nothing the server renders depends on the switches any
+ * more, so this looks like a line that could go. It cannot. `useOptimistic`
+ * drops its overlay the moment this transition resolves and falls back to the
+ * prop it was seeded from - without a revalidation that prop is still the
+ * pre-click value, and the switches would visibly snap back. Keeping it is
+ * what makes the server render the authority, which is the rule.
  */
 export async function setTapKinds(formData: FormData): Promise<void> {
   const raw = formData.get("kinds");

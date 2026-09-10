@@ -173,6 +173,20 @@ export function ReadinessPipe({
             <em className="rp-tag">
               <b>Trace</b>
               <span>{on ? "durations arrive" : "durations stay dashed"}</span>
+              {/*
+                The one thing on this diagram that says a circle can be
+                opened. It reads the same whether the line is on or off,
+                because the window answers a question in both states - what
+                has arrived, or whether anything ever has - and a cue that
+                appeared only once the run was complete would be missing from
+                exactly the page a reader is trying to debug.
+
+                Not `aria-hidden`: the button's own label already says "Open
+                the tap on the line", so a screen reader hearing this too
+                hears the same instruction twice rather than a decoration it
+                cannot act on.
+              */}
+              <span className="rp-tap-cue">open the terminal</span>
             </em>
             <Say
               title="In-depth tracing"

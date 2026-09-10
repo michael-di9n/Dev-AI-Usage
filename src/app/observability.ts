@@ -1,6 +1,6 @@
 import { runInstrumentation } from "../analyze/instrumentation/index";
 import type { LiveEvidence, SettingsScan } from "../domain/instrumentation";
-import { TAP_LINES, parseTapKinds, tapLines, type TraceTap } from "../domain/traceTap";
+import { TAP_KINDS, TAP_LINES, parseTapKinds, tapLines, type TraceTap } from "../domain/traceTap";
 import type { Signal } from "../domain/types";
 import { SettingsScanner } from "../ingest/settings/SettingsScanner";
 import { sync } from "./background-sync";
@@ -98,6 +98,34 @@ export function observabilityView(receiverOrigin: string): ObservabilityView {
 function traceTap(live: LiveEvidence, projectPath: string | null): TraceTap {
   const queries = app().queries;
   const kinds = parseTapKinds(queries.readState(TAP_KINDS_KEY));
+
+  /*
+   * Every stream's own newest `TAP_LINES`, not the newest `TAP_LINES` overall.
+   *
+   * The window narrows these to the switched-on streams in the browser, so
+   * that flipping a switch moves the log in the same frame instead of a page
+   * away - and it can only do that honestly if it is holding each stream's own
+   * window. The newest forty records on this machine contain no spans at all,
+   * because ten spans have arrived against twelve thousand events; filtering
+   * those forty would report a working spans stream as dry, and `tapState`
+   * would then call a live receiver quiet. See `linesFor`.
+   *
+   * It is the query's own answer and not an approximation of it.
+   * `otelRecentRecords` takes the newest `limit` of each stream it is asked
+   * for and then the newest `limit` of that union, so given every stream's
+   * window the browser computes the same set for any subset of them.
+   *
+   * One call per arm rather than one wider call, because the arms already
+   * exist and asking for one kind is what switches the others off in the SQL.
+   * Merged on `ts` here, before `tapLines`: that prints a clock and drops the
+   * date, so a merge after it would sort yesterday's 23:59 above today's
+   * 00:01. Lexicographic, which is what the SQL's own `ORDER BY ts DESC` on
+   * these TEXT columns already relies on.
+   */
+  const records = TAP_KINDS
+    .flatMap((kind) => queries.otelRecentRecords(TAP_LINES, projectPath, [kind]))
+    .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+
   return {
     heard: {
       events: live.events,
@@ -107,7 +135,7 @@ function traceTap(live: LiveEvidence, projectPath: string | null): TraceTap {
       lastSeen: live.otelLastSeen,
     },
     kinds,
-    lines: tapLines(queries.otelRecentRecords(TAP_LINES, projectPath, kinds)),
+    lines: tapLines(records),
   };
 }
 

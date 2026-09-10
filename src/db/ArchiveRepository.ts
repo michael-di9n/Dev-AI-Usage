@@ -128,11 +128,35 @@ export class ArchiveRepository {
     });
   }
 
-  /** Note that a path is still on disk, without reading or rewriting it. */
-  touchSeen(path: string, pass: number, at: string): void {
+  /**
+   * Note that these paths are still on disk, without reading or rewriting them.
+   *
+   * One statement for the whole pass, not one per path. It was one per path,
+   * and on a corpus of four thousand session files that is four thousand bare
+   * UPDATEs on a pass where nothing had changed - each its own implicit
+   * transaction, so each one an fsync of the WAL, because `Database.ts` leaves
+   * `synchronous` at its FULL default and this database is the one that must
+   * keep it. The read half of the same loop measures 18ms; the write half was
+   * the pass. It is on the thread that also renders the dashboard.
+   *
+   * Not a transaction around the old loop, which was the other way to spend
+   * one commit instead of four thousand: `saveChunk` already opens one and
+   * `Db.transaction` issues a bare BEGIN with no savepoint, so nesting throws
+   * the first time a file has actually changed. A pass-long transaction would
+   * also hold the write lock every dashboard write then waits `busy_timeout`
+   * on, which trades a slow import for a stalled page.
+   *
+   * The list arrives as one JSON parameter rather than N placeholders.
+   * SQLITE_MAX_VARIABLE_NUMBER is a real ceiling, and a corpus that grew past
+   * it would start failing rather than start being slow.
+   */
+  markSeen(paths: readonly string[], pass: number, at: string): void {
+    if (paths.length === 0) return;
     this.db.run(
-      "UPDATE archived_file SET last_seen_at = ?, seen_pass = ?, missing_since = NULL WHERE path = ?",
-      [at, pass, path],
+      `UPDATE archived_file
+          SET last_seen_at = ?, seen_pass = ?, missing_since = NULL
+        WHERE path IN (SELECT value FROM json_each(?))`,
+      [at, pass, JSON.stringify(paths)],
     );
   }
 

@@ -193,6 +193,49 @@ describe("TranscriptArchiveSource", () => {
       .toBe("# what we learned\n");
   });
 
+  /**
+   * The seen/missing contract, through the batched write.
+   *
+   * Marking a file as still-there used to be one UPDATE per file, outside any
+   * transaction - so a pass over a corpus where nothing had changed was one
+   * WAL fsync per file, on the thread rendering the dashboard. It is one
+   * statement now, and these two cases are the halves of what that statement
+   * has to keep true: everything still on disk is stamped with this pass, and
+   * `markMissing` - which sweeps by `seen_pass <` - must therefore find none
+   * of them.
+   */
+  it("marks every unchanged file as seen on a pass that writes nothing", async () => {
+    for (const name of ["p.jsonl", "q.jsonl", "r.jsonl"]) {
+      writeFileSync(transcript(name), lines(0, 20));
+    }
+    await source().ingest();
+
+    // Nothing has changed on disk, so this pass takes the batched path for
+    // every file and writes no chunks at all.
+    const second = await source().ingest();
+
+    expect(second.recordsWritten).toBe(0);
+    expect(second.detail).not.toContain("no longer on disk");
+    expect(queries.coverage().missing).toBe(0);
+    expect(queries.paths()).toHaveLength(3);
+  });
+
+  it("still notices a file that went away on a pass where the others did not change", async () => {
+    for (const name of ["s.jsonl", "t.jsonl"]) {
+      writeFileSync(transcript(name), lines(0, 20));
+    }
+    await source().ingest();
+
+    unlinkSync(transcript("s.jsonl"));
+    const result = await source().ingest();
+
+    // The surviving file was marked seen in the batch, so the sweep that
+    // follows it catches exactly the one that is gone - not both, and not
+    // neither.
+    expect(result.detail).toContain("1 no longer on disk");
+    expect(queries.coverage().missing).toBe(1);
+  });
+
   it("reports how much it actually saved", async () => {
     writeFileSync(transcript("i.jsonl"), lines(0, 2000));
 
